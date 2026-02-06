@@ -1,0 +1,46 @@
+# Voir https://github.com/angular/angular-cli/wiki/angular-cli pour plus d'infos
+
+# Dependencies
+/node_modules
+/node_modules/
+
+# IDEs and editors
+/.idea
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+*.sublime-workspace
+
+# IDE - VSCode
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# Miscellaneous
+/.angular/cache
+*.log
+logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# System Files
+.DS_Store
+Thumbs.db
+
+# Environnement
+environment.ts
+environment.prod.ts
+
+# Build
+/dist
+/tmp
+/out-tsc
+
+# Dépendances
+package-lock.json
+yarn.lock

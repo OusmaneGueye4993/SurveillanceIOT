@@ -1,0 +1,24 @@
+<div class="toolbar">
+  <div class="left">
+    <b>Carte GPS</b>
+    <span class="status">MQTT: {{ status$ | async }}</span>
+  </div>
+
+  <div class="right">
+    <button mat-stroked-button (click)="play()" [disabled]="playing">▶ Play</button>
+    <button mat-stroked-button (click)="pause()" [disabled]="!playing">⏸ Pause</button>
+    <button mat-stroked-button (click)="stopReplay()">⏹ Stop</button>
+
+    <mat-button-toggle-group
+      [value]="speed"
+      (valueChange)="setSpeed($event)"
+      aria-label="Speed"
+    >
+      <mat-button-toggle [value]="1">x1</mat-button-toggle>
+      <mat-button-toggle [value]="2">x2</mat-button-toggle>
+      <mat-button-toggle [value]="5">x5</mat-button-toggle>
+    </mat-button-toggle-group>
+  </div>
+</div>
+
+<div id="map" class="map"></div>

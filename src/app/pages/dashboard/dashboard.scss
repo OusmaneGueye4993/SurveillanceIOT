@@ -1,0 +1,109 @@
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.kpi {
+  text-align: center;
+}
+
+.value {
+  font-size: 28px;
+  font-weight: bold;
+  margin-top: 8px;
+}
+
+
+.kpi {
+  border-radius: 18px;
+  box-shadow: 0 10px 30px rgba(0,0,0,.08);
+  overflow: hidden;
+}
+
+.kpi-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 16px;
+}
+
+.kpi-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.kpi-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+}
+
+.kpi-title {
+  font-weight: 700;
+  font-size: 14px;
+  line-height: 1.1;
+}
+
+.kpi-sub {
+  font-size: 12px;
+  opacity: 0.75;
+  margin-top: 2px;
+}
+
+.kpi-right .kpi-value {
+  font-weight: 800;
+  font-size: 22px;
+  letter-spacing: -0.3px;
+}
+
+.kpi-right .kpi-value.small {
+  font-size: 18px;
+}
+
+/* 🎨 Couleurs par KPI */
+.kpi-battery {
+  background: linear-gradient(135deg, rgba(76,175,80,.14), rgba(76,175,80,.02));
+}
+.kpi-battery .kpi-icon {
+  background: rgba(76,175,80,.18);
+}
+
+.kpi-temp {
+  background: linear-gradient(135deg, rgba(255,152,0,.18), rgba(255,152,0,.02));
+}
+.kpi-temp .kpi-icon {
+  background: rgba(255,152,0,.22);
+}
+
+.kpi-rssi {
+  background: linear-gradient(135deg, rgba(33,150,243,.18), rgba(33,150,243,.02));
+}
+.kpi-rssi .kpi-icon {
+  background: rgba(33,150,243,.22);
+}
+
+.kpi-gps {
+  background: linear-gradient(135deg, rgba(156,39,176,.16), rgba(156,39,176,.02));
+}
+.kpi-gps .kpi-icon {
+  background: rgba(156,39,176,.22);
+}
+
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 16px;
+  align-items: stretch;
+}
+
+/* Les widgets larges prennent toute la ligne */
+.wide {
+  grid-column: 1 / -1;
+}

@@ -1,0 +1,78 @@
+<h2>Paramètres</h2>
+
+<ng-container *ngIf="cfg$ | async as cfg">
+  <div class="grid">
+
+    <mat-card>
+      <mat-card-title>Widgets</mat-card-title>
+      <mat-card-content>
+        <p class="hint">Glisse-dépose pour changer l’ordre.</p>
+
+        <div cdkDropList (cdkDropListDropped)="drop($event, cfg)" class="list">
+          <div class="row" *ngFor="let w of cfg.widgets; let i = index" cdkDrag>
+            <span class="drag">☰</span>
+            <span class="title">{{ w.title }}</span>
+            <span class="spacer"></span>
+            <mat-slide-toggle
+  [checked]="w.enabled"
+  (change)="toggleWidget(cfg, i, $event.checked)">
+</mat-slide-toggle>
+
+
+          </div>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card>
+      <mat-card-title>Graphe</mat-card-title>
+      <mat-card-content>
+        <mat-form-field appearance="outline" class="full">
+          <mat-label>Type de graphe</mat-label>
+          <mat-select [formControl]="form.controls.chartType">
+            <mat-option value="line">Ligne</mat-option>
+            <mat-option value="bar">Barres</mat-option>
+            <mat-option value="area">Aire</mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <button mat-raised-button color="primary" (click)="saveForm(cfg)">
+          Enregistrer
+        </button>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card>
+      <mat-card-title>Alertes</mat-card-title>
+      <mat-card-content>
+        <div class="fields">
+          <mat-form-field appearance="outline">
+            <mat-label>Batterie faible (%)</mat-label>
+            <input matInput type="number" [formControl]="form.controls.batteryLow" />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Signal faible RSSI (dBm)</mat-label>
+            <input matInput type="number" [formControl]="form.controls.rssiLow" />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Température max (°C)</mat-label>
+            <input matInput type="number" [formControl]="form.controls.tempHigh" />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Données absentes (sec)</mat-label>
+            <input matInput type="number" [formControl]="form.controls.staleSeconds" />
+          </mat-form-field>
+        </div>
+
+        <div class="actions">
+          <button mat-raised-button color="primary" (click)="saveForm(cfg)">Enregistrer</button>
+          <button mat-button (click)="reset()">Réinitialiser</button>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+  </div>
+</ng-container>
