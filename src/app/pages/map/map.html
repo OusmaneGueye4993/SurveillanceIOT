@@ -21,4 +21,10 @@
   </div>
 </div>
 
-<div id="map" class="map"></div>
+<app-fleet-map
+  class="map-host"
+  [follow]="true"
+  [selected]="selected"
+  [history]="history"
+  [devices]="devices">
+</app-fleet-map>

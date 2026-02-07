@@ -11,7 +11,7 @@ import { AlertsService, AlertItem } from '../../core/alerts/alerts.service';
 import { DashboardConfig } from '../../core/settings/dashboard-config.model';
 import { TelemetryApiService } from '../../core/api/telemetry-api.service';
 
-import { MiniMapComponent } from '../../shared/mini-map/mini-map';
+import { FleetMapComponent } from '../../shared/fleet-map/fleet-map';
 import { TelemetryChartComponent } from '../telemetry/telemetry';
 
 @Component({
@@ -21,7 +21,7 @@ import { TelemetryChartComponent } from '../telemetry/telemetry';
     CommonModule,
     MatCardModule,
     MatIconModule,
-    MiniMapComponent,
+    FleetMapComponent,
     TelemetryChartComponent,
   ],
   templateUrl: './dashboard.html',
@@ -39,8 +39,11 @@ export class DashboardComponent implements OnInit {
   alerts$!: Observable<AlertItem[]>;
 
   /** Historique Django */
-  deviceEui = '70B3D57ED0074DF2'; // ⚠️ remplace par ton vrai device
+  deviceEui = '70B3D57ED0074DF2';
   history: any[] = [];
+
+  /** UI map */
+  selected: string | null = this.deviceEui;
 
   constructor(
     private mqtt: MqttService,
@@ -55,15 +58,17 @@ export class DashboardComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    /** 1️⃣ Charger l’historique depuis Django */
-   this.api.getHistory(this.deviceEui, 300).subscribe(res => {
-  this.history = res.history;
-  console.log('HISTORY LEN =', this.history.length, 'FIRST=', this.history[0]);
-});
+    // 1) Charger l’historique depuis Django
+    this.api.getHistory(this.deviceEui, 300).subscribe((res: any) => {
+      this.history = Array.isArray(res?.history) ? res.history : [];
+    });
 
-
-    /** 2️⃣ Démarrer MQTT (temps réel) */
+    // 2) Démarrer MQTT (temps réel)
     this.mqtt.connect();
+  }
+
+  onSelectDevice(eui: string) {
+    this.selected = eui;
   }
 
   /** Formatage propre des valeurs */

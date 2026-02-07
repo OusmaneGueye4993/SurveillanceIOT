@@ -1,0 +1,47 @@
+.fleet-map {
+  width: 100%;
+  height: 420px;
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+/* IMPORTANT:
+   Leaflet injecte les markers en dehors du scope Angular (Emulated encapsulation),
+   donc on force l'application des styles avec ::ng-deep.
+*/
+
+/* ===== MARKERS VISIBLES / CONTRASTÉS ===== */
+:host ::ng-deep .marker {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 3px solid #ffffff;
+  box-shadow:
+    0 0 0 2px rgba(0, 0, 0, .35),
+    0 6px 18px rgba(0, 0, 0, .45);
+}
+
+:host ::ng-deep .marker-ok {
+  background: #2e7d32;
+}
+
+:host ::ng-deep .marker-off {
+  background: #c62828;
+}
+
+:host ::ng-deep .marker-selected {
+  width: 20px;
+  height: 20px;
+  margin-left: -2px;
+  margin-top: -2px;
+  box-shadow:
+    0 0 0 3px #ffffff,
+    0 0 0 7px rgba(33, 150, 243, .6),
+    0 10px 24px rgba(33, 150, 243, .55);
+}
+
+/* évite tout style par défaut Leaflet */
+:host ::ng-deep .leaflet-marker-icon {
+  background: transparent !important;
+  border: none !important;
+}

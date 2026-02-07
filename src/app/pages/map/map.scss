@@ -4,30 +4,28 @@
   justify-content: space-between;
   gap: 12px;
   padding: 10px 12px;
+  border-bottom: 1px solid rgba(0,0,0,.08);
 }
 
 .left {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 10px;
 }
 
 .status {
-  opacity: 0.7;
-  font-size: 12px;
+  opacity: 0.8;
+  font-size: 13px;
 }
 
 .right {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   flex-wrap: wrap;
 }
 
-.map {
-  width: 100%;
-  height: calc(100vh - 120px); // adapte si tu as header
-  min-height: 520px;
-  border-radius: 14px;
-  overflow: hidden;
+.map-host {
+  display: block;
+  padding: 12px;
 }
