@@ -5,9 +5,9 @@
   </div>
 
   <div class="right">
-    <button mat-stroked-button (click)="play()" [disabled]="playing">▶ Play</button>
+    <button mat-stroked-button (click)="play()" [disabled]="playing || !hasTrajectory">▶ Play</button>
     <button mat-stroked-button (click)="pause()" [disabled]="!playing">⏸ Pause</button>
-    <button mat-stroked-button (click)="stopReplay()">⏹ Stop</button>
+    <button mat-stroked-button (click)="stopReplay()" [disabled]="!hasTrajectory">⏹ Stop</button>
 
     <mat-button-toggle-group
       [value]="speed"
@@ -19,6 +19,11 @@
       <mat-button-toggle [value]="5">x5</mat-button-toggle>
     </mat-button-toggle-group>
   </div>
+</div>
+
+<div class="hint" *ngIf="!hasTrajectory">
+  <b>Trajectoire non visible :</b> il faut au moins <b>2 points GPS différents</b> dans l’historique.
+  <span class="muted">(Si tes points sont identiques, la ligne est “invisible”.)</span>
 </div>
 
 <app-fleet-map

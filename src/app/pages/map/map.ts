@@ -10,6 +10,18 @@ import { MatButtonToggleModule } from '@angular/material/button-toggle';
 
 import { FleetMapComponent } from '../../shared/fleet-map/fleet-map';
 
+type Speed = 1 | 2 | 5;
+
+type HistoryPoint = {
+  ts?: number;
+  lat: number;
+  lng: number;
+  temp?: number | null;
+  battery?: number | null;
+  rssi?: number | null;
+  snr?: number | null;
+};
+
 @Component({
   selector: 'app-map',
   standalone: true,
@@ -22,10 +34,14 @@ export class MapComponent implements OnInit, OnDestroy {
 
   deviceEui = '70B3D57ED0074DF2';
 
-  // replay + affichage
-  history: any[] = [];
+  /** Historique brut API */
+  historyRaw: any[] = [];
+
+  /** Historique nettoyé + dédoublonné (utilisé pour polyline + replay) */
+  history: HistoryPoint[] = [];
+
   playing = false;
-  speed: 1 | 2 | 5 = 1;
+  speed: Speed = 1;
 
   selected: string | null = this.deviceEui;
 
@@ -44,16 +60,20 @@ export class MapComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    // 1) Charger historique (trajet)
+    // 1) Charger historique (trajet) depuis Django
     this.api.getHistory(this.deviceEui, 1000).subscribe((res: any) => {
-      this.history = Array.isArray(res?.history) ? res.history : [];
-      // mettre le marker au premier point
+      this.historyRaw = Array.isArray(res?.history) ? res.history : [];
+      this.history = this.sanitizeAndDedupeHistory(this.historyRaw);
+
+      // Positionner le marker au 1er point valide (si disponible)
       const first = this.history?.[0];
-      const lat = Number(first?.lat);
-      const lng = Number(first?.lng);
-      if (Number.isFinite(lat) && Number.isFinite(lng)) {
-        this.currentLat = lat;
-        this.currentLng = lng;
+      if (first) {
+        this.currentLat = first.lat;
+        this.currentLng = first.lng;
+      } else {
+        // fallback : si pas d’historique, on garde null et MQTT fera bouger
+        this.currentLat = null;
+        this.currentLng = null;
       }
     });
 
@@ -78,6 +98,11 @@ export class MapComponent implements OnInit, OnDestroy {
     this.mqttSub?.unsubscribe();
   }
 
+  /** Indique si on a assez de points pour tracer une trajectoire */
+  get hasTrajectory(): boolean {
+    return Array.isArray(this.history) && this.history.length >= 2;
+  }
+
   // Devices array pour FleetMap
   get devices(): any[] {
     return [
@@ -91,7 +116,7 @@ export class MapComponent implements OnInit, OnDestroy {
 
   // ---------- Replay controls ----------
   play() {
-    if (!this.history?.length) return;
+    if (!this.hasTrajectory) return;
 
     this.playing = true;
 
@@ -114,15 +139,13 @@ export class MapComponent implements OnInit, OnDestroy {
     this.replayIndex = 0;
 
     const first = this.history?.[0];
-    const lat = Number(first?.lat);
-    const lng = Number(first?.lng);
-    if (Number.isFinite(lat) && Number.isFinite(lng)) {
-      this.currentLat = lat;
-      this.currentLng = lng;
+    if (first) {
+      this.currentLat = first.lat;
+      this.currentLng = first.lng;
     }
   }
 
-  setSpeed(v: 1 | 2 | 5) {
+  setSpeed(v: Speed) {
     this.speed = v;
     if (this.playing) {
       this.pause();
@@ -132,15 +155,12 @@ export class MapComponent implements OnInit, OnDestroy {
 
   private tick() {
     if (!this.playing) return;
-    if (!this.history?.length) return;
+    if (!this.hasTrajectory) return;
 
     const p = this.history[this.replayIndex];
-    const lat = Number(p?.lat);
-    const lng = Number(p?.lng);
-
-    if (Number.isFinite(lat) && Number.isFinite(lng)) {
-      this.currentLat = lat;
-      this.currentLng = lng;
+    if (p) {
+      this.currentLat = p.lat;
+      this.currentLng = p.lng;
     }
 
     this.replayIndex++;
@@ -152,7 +172,53 @@ export class MapComponent implements OnInit, OnDestroy {
 
     const base = 600; // 0.6s par point en x1
     const wait = Math.max(80, Math.round(base / this.speed));
-
     this.replayTimer = window.setTimeout(() => this.tick(), wait);
+  }
+
+  // ---------- History sanitization ----------
+  private sanitizeAndDedupeHistory(raw: any[]): HistoryPoint[] {
+    // 1) convert to numbers + filter invalid
+    const cleaned: HistoryPoint[] = (raw || [])
+      .map((p: any) => {
+        const lat = Number(p?.lat);
+        const lng = Number(p?.lng);
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+
+        const ts = p?.ts != null ? Number(p.ts) : undefined;
+
+        return {
+          ts: Number.isFinite(ts as number) ? (ts as number) : undefined,
+          lat,
+          lng,
+          temp: this.toNumOrNull(p?.temp),
+          battery: this.toNumOrNull(p?.battery),
+          rssi: this.toNumOrNull(p?.rssi),
+          snr: this.toNumOrNull(p?.snr),
+        } as HistoryPoint;
+      })
+      .filter(Boolean) as HistoryPoint[];
+
+    // 2) dedupe consecutive points (same coords) with a small epsilon
+    const eps = 1e-7;
+    const deduped: HistoryPoint[] = [];
+    for (const pt of cleaned) {
+      const prev = deduped[deduped.length - 1];
+      if (!prev) {
+        deduped.push(pt);
+        continue;
+      }
+      const same =
+        Math.abs(prev.lat - pt.lat) < eps &&
+        Math.abs(prev.lng - pt.lng) < eps;
+
+      if (!same) deduped.push(pt);
+    }
+
+    return deduped;
+  }
+
+  private toNumOrNull(v: any): number | null {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : null;
   }
 }

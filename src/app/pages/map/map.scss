@@ -29,3 +29,16 @@
   display: block;
   padding: 12px;
 }
+
+.hint {
+  margin: 10px 12px 0;
+  padding: 10px 12px;
+  border: 1px solid rgba(0,0,0,.10);
+  border-radius: 12px;
+  background: rgba(255, 193, 7, 0.10);
+  font-size: 13px;
+}
+
+.muted {
+  opacity: 0.8;
+}
