@@ -1,31 +1,95 @@
-<div class="toolbar">
-  <div class="left">
-    <b>Trajet</b>
-    <span class="sub" *ngIf="deviceEui">Équipement: <b>{{ deviceEui }}</b></span>
+<div class="page">
+  <!-- TOP BAR -->
+  <div class="top">
+    <div class="titleBlock">
+      <h2>Carte GPS</h2>
+      <div class="sub">
+        Historique & flotte
+        <span class="sep">•</span>
+        Statut MQTT: <b>{{ status$ | async }}</b>
+      </div>
+    </div>
+
+    <mat-slide-toggle
+      [checked]="showHistory"
+      (change)="showHistory = $event.checked">
+      Afficher historique
+    </mat-slide-toggle>
   </div>
 
-  <div class="right">
-    <button mat-stroked-button (click)="play()" [disabled]="playing || !hasTrajectory">▶ Play</button>
-    <button mat-stroked-button (click)="pause()" [disabled]="!playing">⏸ Pause</button>
-    <button mat-stroked-button (click)="stopReplay()" [disabled]="!hasTrajectory">⏹ Stop</button>
+  <!-- MAP EN HAUT -->
+  <mat-card class="mapCard">
+    <mat-card-title>Carte</mat-card-title>
 
-    <mat-button-toggle-group [value]="speed" (valueChange)="setSpeed($event)" aria-label="Speed">
-      <mat-button-toggle [value]="1">x1</mat-button-toggle>
-      <mat-button-toggle [value]="2">x2</mat-button-toggle>
-      <mat-button-toggle [value]="5">x5</mat-button-toggle>
-    </mat-button-toggle-group>
-  </div>
+    <mat-card-content class="mapWrap">
+      <ng-container *ngIf="(filtered$ | async) as devices">
+        <app-fleet-map
+          class="map"
+          [devices]="devices"
+          [selected]="(selected$ | async) ?? null"
+          [history]="history ?? null"
+          [follow]="true"
+          [showHistory]="showHistory"
+          (selectDevice)="onSelect($event)">
+        </app-fleet-map>
+      </ng-container>
+
+      <div class="mapLegend">
+        <span><span class="lgDot ok"></span> Actif</span>
+        <span><span class="lgDot off"></span> Inactif</span>
+        <span><span class="lgDot last"></span> Dernier point</span>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- LISTE ÉQUIPEMENTS EN BAS -->
+  <mat-card class="panel">
+    <mat-card-title>
+      Équipements
+      <span class="count" *ngIf="(filtered$ | async) as d">
+        ({{ d.length }})
+      </span>
+    </mat-card-title>
+
+    <mat-card-content>
+      <ng-container *ngIf="(filtered$ | async) as devices">
+        <mat-nav-list *ngIf="devices.length > 0; else emptyState">
+          <ng-container *ngIf="(selected$ | async) as selected">
+            <a
+              mat-list-item
+              class="equip-item"
+              *ngFor="let d of devices; trackBy: trackByEui"
+              (click)="onSelect(d.device_eui)"
+              [class.selected]="d.device_eui === selected">
+
+              <span
+                class="dot"
+                [class.active]="d.active"
+                [class.inactive]="!d.active">
+              </span>
+
+              <div class="main">
+                <div class="eui">{{ d.device_eui }}</div>
+                <div class="meta">
+                  Bat: {{ fmt(d.last.battery, 0) }}% •
+                  RSSI: {{ fmt(d.last.rssi, 0) }} •
+                  vu il y a {{ secondsAgo(d.lastSeenMs) }}
+                </div>
+              </div>
+
+              <span class="badge" [class.ok]="d.active" [class.off]="!d.active">
+                {{ d.active ? 'ACTIF' : 'INACTIF' }}
+              </span>
+            </a>
+          </ng-container>
+        </mat-nav-list>
+      </ng-container>
+
+      <ng-template #emptyState>
+        <div class="empty">
+          Aucun équipement reçu.
+        </div>
+      </ng-template>
+    </mat-card-content>
+  </mat-card>
 </div>
-
-<div class="hint" *ngIf="deviceEui && !hasTrajectory">
-  Pas assez de points distincts pour tracer la trajectoire (min 2).
-  Vérifie que l’historique DB augmente.
-</div>
-
-<app-fleet-map
-  class="map-host"
-  [follow]="true"
-  [selected]="deviceEui"
-  [history]="history"
-  [devices]="devices">
-</app-fleet-map>

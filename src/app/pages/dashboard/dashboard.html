@@ -1,4 +1,6 @@
-<!-- ✅ NOUVEAU : Flotte -->
+<!-- =========================
+     HEADER (FLOTTE)
+========================= -->
 <div class="fleet-header">
   <div class="fleet-title">
     <h2>Dashboard</h2>
@@ -16,13 +18,17 @@
   </mat-form-field>
 </div>
 
+<!-- =========================
+     LISTE + MAP (UNE SEULE)
+========================= -->
 <ng-container *ngIf="(filtered$ | async) as devices">
   <mat-card class="fleet-list-card">
     <mat-card-title>Équipements ({{ devices.length }})</mat-card-title>
-    <mat-card-content>
 
+    <mat-card-content>
       <div class="equip-list" *ngIf="devices.length > 0; else emptyState">
         <ng-container *ngIf="(selected$ | async) as selected">
+
           <button
             mat-stroked-button
             class="equip-item"
@@ -33,43 +39,53 @@
             [class.selected]="d.device_eui === selected"
           >
             <span class="dot"></span>
+
             <span class="eui">{{ d.device_eui }}</span>
+
             <span class="meta">
-              Bat: {{ fmt(d.last.battery, 0) }}% • RSSI: {{ fmt(d.last.rssi, 0) }} • vu il y a {{ secondsAgo(d.lastSeenMs) }}
+              Bat: {{ fmt(d.last.battery, 0) }}% •
+              RSSI: {{ fmt(d.last.rssi, 0) }} •
+              vu il y a {{ secondsAgo(d.lastSeenMs) }}
             </span>
           </button>
+
         </ng-container>
       </div>
 
       <ng-template #emptyState>
         <div class="hint">
-          Aucun équipement reçu. Lance ton simulateur MQTT ou vérifie le topic <b>drone/telemetry</b>.
+          Aucun équipement reçu. Vérifie le topic <b>drone/telemetry</b>.
         </div>
       </ng-template>
-
     </mat-card-content>
   </mat-card>
 
+  <!-- ✅ UNE SEULE CARTE -->
   <mat-card class="map-card fleet-map-card">
     <mat-card-title>Carte flotte</mat-card-title>
+
     <mat-card-content>
       <ng-container *ngIf="(selected$ | async) as selected">
         <app-fleet-map
-          [follow]="false"
-          [devices]="mapDevices(devices)"
-          [selected]="selected"
-          (selectDevice)="onSelect($event)">
-        </app-fleet-map>
+  [follow]="false"
+  [devices]="devices"
+  [selected]="(selected$ | async) ?? null"
+  [showHistory]="false"
+  (selectDevice)="onSelect($event)"
+></app-fleet-map>
+
 
         <div class="map-hint">
-          Vert = actif • Rouge = inactif • Clique un marker ou un équipement pour sélectionner
+          🟢 Actif • 🔴 Inactif • Clique un marker ou un équipement pour sélectionner
         </div>
       </ng-container>
     </mat-card-content>
   </mat-card>
 </ng-container>
 
-<!-- ✅ Ton dashboard existant (KPI/Map/Chart/Alerts) -->
+<!-- =========================
+     KPI / CHART / ALERTS
+========================= -->
 <p>Statut MQTT: <b>{{ status$ | async }}</b></p>
 
 <ng-container *ngIf="(telemetry$ | async) as t; else noData">
@@ -157,8 +173,7 @@
             </mat-card-content>
           </mat-card>
 
-          <!-- Carte -->
-    
+          <!-- ✅ PAS DE MINI-MAP ICI (donc jamais 2 cartes) -->
 
           <!-- Graphique -->
           <mat-card *ngIf="w.type === 'chart-telemetry'" class="wide">
@@ -178,7 +193,9 @@
             <mat-card-content>
               <div *ngIf="alerts$ | async as a">
                 <p *ngIf="a.length === 0" class="hint">Aucune alerte.</p>
-                <div *ngFor="let item of a" class="alert"
+
+                <div *ngFor="let item of a"
+                     class="alert"
                      [class.critical]="item.level === 'critical'"
                      [class.warn]="item.level === 'warn'">
                   <b>{{ item.level }}</b> — {{ item.message }}

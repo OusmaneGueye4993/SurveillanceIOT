@@ -4,6 +4,7 @@ import {
   ElementRef,
   EventEmitter,
   Input,
+  NgZone,
   OnChanges,
   OnDestroy,
   Output,
@@ -13,6 +14,28 @@ import {
 import { CommonModule } from '@angular/common';
 import * as L from 'leaflet';
 
+export interface HistoryPoint {
+  ts?: number;
+  lat: number;
+  lng: number;
+}
+
+export interface DeviceLast {
+  ts?: number;           // ✅ optionnel
+  lat?: number | null;   // ✅ optionnel
+  lng?: number | null;   // ✅ optionnel
+  battery?: number;
+  rssi?: number;
+  temp?: number;
+}
+
+export interface DeviceSummary {
+  device_eui: string;
+  active: boolean;
+  last: DeviceLast;
+  lastSeenMs?: number;
+}
+
 @Component({
   selector: 'app-fleet-map',
   standalone: true,
@@ -21,191 +44,173 @@ import * as L from 'leaflet';
   styleUrls: ['./fleet-map.scss'],
 })
 export class FleetMapComponent implements AfterViewInit, OnChanges, OnDestroy {
-  @Input() devices: any[] = [];
+  @ViewChild('mapEl', { static: true }) mapEl!: ElementRef<HTMLDivElement>;
+  @Input() devices: any[] = []; 
+ // @Input() devices: DeviceSummary[] = [];
   @Input() selected: string | null = null;
 
-  /** Historique (optionnel) : [{lat,lng,ts?}, ...] */
-  @Input() history: any[] | null = null;
-
-  /** Si true : la carte suit automatiquement le marker sélectionné (ou le 1er device) */
+  @Input() history: HistoryPoint[] | null = null;
   @Input() follow = false;
+  @Input() showHistory = true;
 
-  /** Centre/zoom par défaut */
-  @Input() center: [number, number] = [14.6940, -17.4445];
-  @Input() zoom = 13;
+  @Input() initialCenter: [number, number] = [14.694, -17.4445];
+  @Input() initialZoom = 12;
 
   @Output() selectDevice = new EventEmitter<string>();
 
-  @ViewChild('fleetMap', { static: true }) mapEl!: ElementRef<HTMLDivElement>;
+  private map!: L.Map;
+  private tiles!: L.TileLayer;
 
-  private map?: L.Map;
+  private markerLayer = L.layerGroup();
+  private trackLayer = L.layerGroup();
   private markers = new Map<string, L.Marker>();
-  private path?: L.Polyline;
 
-  private resizeObserver?: ResizeObserver;
-  private didInitialFit = false;
+  private initialized = false;
+
+  constructor(private zone: NgZone) {}
 
   ngAfterViewInit(): void {
-    this.initMap();
-    this.refreshAll(true);
+    this.initMapOnce();
+    this.renderAll();
   }
 
-  ngOnChanges(changes: SimpleChanges): void {
-    if (!this.map) return;
-
-    const devicesChanged = !!changes['devices'];
-    const selectedChanged = !!changes['selected'];
-    const historyChanged = !!changes['history'];
-
-    if (devicesChanged || selectedChanged) this.renderMarkers();
-    if (historyChanged) this.renderHistory();
-
-    if (this.follow && (devicesChanged || selectedChanged || historyChanged)) {
-      this.followTarget();
-    }
-
-    // important si la carte est dans mat-card / onglet / layout flex
-    this.safeInvalidateSize();
+  ngOnChanges(_: SimpleChanges): void {
+    if (!this.initialized) return;
+    this.renderAll();
   }
 
   ngOnDestroy(): void {
-    this.resizeObserver?.disconnect();
-    this.resizeObserver = undefined;
-
-    this.map?.remove();
-    this.map = undefined;
-
-    this.markers.clear();
-    this.path = undefined;
+    if (this.map) this.map.remove();
   }
 
-  // ---------- Init ----------
-  private initMap(): void {
-    this.map = L.map(this.mapEl.nativeElement, {
-      center: this.center,
-      zoom: this.zoom,
-      zoomControl: true,
-    });
+  private initMapOnce(): void {
+    if (this.initialized) return;
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OpenStreetMap',
-    }).addTo(this.map);
-
-    // ResizeObserver pour corriger les maps invisibles après layout
-    this.resizeObserver = new ResizeObserver(() => this.safeInvalidateSize());
-    this.resizeObserver.observe(this.mapEl.nativeElement);
-
-    // 1er invalidate size léger
-    setTimeout(() => this.safeInvalidateSize(), 150);
-  }
-
-  private safeInvalidateSize(): void {
-    if (!this.map) return;
-    setTimeout(() => this.map?.invalidateSize(), 0);
-  }
-
-  private refreshAll(first = false): void {
-    this.renderHistory();
-    this.renderMarkers();
-
-    if (this.follow) this.followTarget();
-    if (first) this.safeInvalidateSize();
-  }
-
-  // ---------- Markers ----------
-  private renderMarkers(): void {
-    if (!this.map) return;
-
-    // Clear markers
-    this.markers.forEach((m) => m.remove());
-    this.markers.clear();
-
-    for (const d of this.devices || []) {
-      const eui = d?.device_eui ?? d?.id ?? d?.name ?? '';
-      if (!eui) continue;
-
-      const lat = d?.last?.lat ?? d?.lat;
-      const lng = d?.last?.lng ?? d?.lng;
-
-      if (lat == null || lng == null) continue;
-
-      const active = !!d?.active;
-
-      const marker = L.marker([Number(lat), Number(lng)], {
-        icon: this.getDeviceIcon(active, eui === this.selected),
+    this.zone.runOutsideAngular(() => {
+      this.map = L.map(this.mapEl.nativeElement, {
+        center: this.initialCenter,
+        zoom: this.initialZoom,
+        zoomControl: true,
       });
 
-      marker.on('click', () => this.selectDevice.emit(String(eui)));
+      this.tiles = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 20,
+        attribution: '© OpenStreetMap contributors',
+      });
 
-      marker.bindTooltip(
-        `${eui} • ${active ? 'Actif' : 'Inactif'}`,
-        { direction: 'top', offset: [0, -8] }
-      );
+      this.tiles.addTo(this.map);
+      this.markerLayer.addTo(this.map);
+      this.trackLayer.addTo(this.map);
 
-      marker.addTo(this.map);
-      this.markers.set(String(eui), marker);
+      this.initialized = true;
+    });
+  }
+
+  private renderAll(): void {
+    this.updateMarkers();
+    this.updateHistoryTrack();
+    if (this.follow && this.selected) this.flyToSelected();
+  }
+
+  private updateMarkers(): void {
+    const nextKeys = new Set(this.devices.map(d => d.device_eui));
+
+    // remove old markers
+    for (const [eui, marker] of this.markers.entries()) {
+      if (!nextKeys.has(eui)) {
+        marker.remove();
+        this.markers.delete(eui);
+      }
+    }
+
+    // add/update
+    for (const d of this.devices) {
+      const lat = Number(d?.last?.lat);
+      const lng = Number(d?.last?.lng);
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
+
+      const latlng: L.LatLngExpression = [lat, lng];
+      const isSel = d.device_eui === this.selected;
+
+      if (!this.markers.has(d.device_eui)) {
+        const m = L.marker(latlng, {
+          icon: this.makeDotIcon(d.active ? 'active' : 'inactive', isSel),
+          keyboard: false,
+        });
+
+        m.on('click', () => this.zone.run(() => this.selectDevice.emit(d.device_eui)));
+        m.addTo(this.markerLayer);
+        this.markers.set(d.device_eui, m);
+      } else {
+        const m = this.markers.get(d.device_eui)!;
+        m.setLatLng(latlng);
+        m.setIcon(this.makeDotIcon(d.active ? 'active' : 'inactive', isSel));
+      }
     }
   }
 
-  private getDeviceIcon(active: boolean, selected: boolean): L.DivIcon {
-    let cls = 'marker';
-    cls += active ? ' marker-ok' : ' marker-off';
-    if (selected) cls += ' marker-selected';
+  private updateHistoryTrack(): void {
+    this.trackLayer.clearLayers();
+
+    if (!this.showHistory) return;
+    if (!this.selected) return;
+    if (!this.history || this.history.length < 2) return;
+
+    const pts = this.history
+      .map(p => [Number(p.lat), Number(p.lng)] as [number, number])
+      .filter(([la, ln]) => Number.isFinite(la) && Number.isFinite(ln));
+
+    if (pts.length < 2) return;
+
+    L.polyline(pts, { weight: 4, opacity: 0.85 }).addTo(this.trackLayer);
+
+    const last = pts[pts.length - 1];
+    L.marker(last, { icon: this.makeLastPointIcon(), keyboard: false }).addTo(this.trackLayer);
+  }
+
+  private flyToSelected(): void {
+    const m = this.markers.get(this.selected!);
+    if (!m) return;
+    const ll = m.getLatLng();
+    this.map.flyTo(ll, Math.max(this.map.getZoom(), 14), { duration: 0.8 });
+  }
+
+  private makeDotIcon(state: 'active' | 'inactive', selected: boolean): L.DivIcon {
+    const color = state === 'active' ? '#2e7d32' : '#c62828';
+    const ring = selected ? '0 0 0 4px rgba(33,150,243,0.35)' : 'none';
+    const size = selected ? 14 : 12;
+
+    const html = `
+      <div style="
+        width:${size}px;height:${size}px;border-radius:50%;
+        background:${color};
+        box-shadow:${ring};
+        border:2px solid rgba(255,255,255,0.9);
+      "></div>
+    `;
 
     return L.divIcon({
-      className: cls,
-      iconSize: selected ? [20, 20] : [16, 16],
-      iconAnchor: selected ? [10, 10] : [8, 8],
+      className: 'dot-icon',
+      html,
+      iconSize: [size, size],
+      iconAnchor: [size / 2, size / 2],
     });
   }
 
-  // ---------- History path ----------
-  private renderHistory(): void {
-    if (!this.map) return;
-
-    // Remove old
-    this.path?.remove();
-    this.path = undefined;
-
-    const points = Array.isArray(this.history) ? this.history : [];
-    const latlngs: L.LatLngExpression[] = points
-      .map((p) => [Number(p?.lat), Number(p?.lng)] as [number, number])
-      .filter(([lat, lng]) => Number.isFinite(lat) && Number.isFinite(lng));
-
-    if (latlngs.length < 2) return;
-
-    this.path = L.polyline(latlngs, {
-      weight: 4,
-      opacity: 0.9,
-    }).addTo(this.map);
-
-    // Fit une seule fois au début (si follow)
-    if (this.follow && !this.didInitialFit) {
-      this.didInitialFit = true;
-      const bounds = L.latLngBounds(latlngs as any);
-      this.map.fitBounds(bounds, { padding: [30, 30] });
-    }
-  }
-
-  // ---------- Follow ----------
-  private followTarget(): void {
-    if (!this.map) return;
-
-    // 1) si selected existe
-    if (this.selected && this.markers.has(this.selected)) {
-      const m = this.markers.get(this.selected)!;
-      this.map.setView(m.getLatLng(), Math.max(this.map.getZoom(), this.zoom), {
-        animate: true,
-      });
-      return;
-    }
-
-    // 2) sinon 1er marker
-    const first = this.markers.values().next().value as L.Marker | undefined;
-    if (first) {
-      this.map.setView(first.getLatLng(), Math.max(this.map.getZoom(), this.zoom), {
-        animate: true,
-      });
-    }
+  private makeLastPointIcon(): L.DivIcon {
+    const html = `
+      <div style="
+        width:18px;height:18px;border-radius:50%;
+        background:#ff9800;
+        border:3px solid rgba(255,255,255,0.95);
+        box-shadow:0 0 0 5px rgba(255,152,0,0.22);
+      "></div>
+    `;
+    return L.divIcon({
+      className: 'last-point-icon',
+      html,
+      iconSize: [18, 18],
+      iconAnchor: [9, 9],
+    });
   }
 }

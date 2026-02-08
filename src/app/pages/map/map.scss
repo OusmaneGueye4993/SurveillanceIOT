@@ -1,40 +1,141 @@
-.toolbar {
+.page {
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* Top bar */
+.top {
+  display: flex;
   justify-content: space-between;
+  align-items: flex-end;
   gap: 12px;
-  padding: 10px 12px;
-  border-bottom: 1px solid rgba(0,0,0,.08);
+
+  h2 {
+    margin: 0;
+    font-size: 26px;
+    font-weight: 800;
+  }
+
+  .sub {
+    margin-top: 4px;
+    font-size: 13px;
+    opacity: 0.75;
+    display: flex;
+    gap: 6px;
+    align-items: center;
+  }
 }
 
-.left {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+/* MAP */
+.mapCard {
+  border-radius: 18px;
+  overflow: hidden;
 }
 
-.sub {
-  opacity: 0.75;
-  font-size: 13px;
+.mapWrap {
+  padding: 0 !important;
 }
 
-.right {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.map-host {
+:host ::ng-deep app-fleet-map.map {
   display: block;
-  padding: 12px;
+  width: 100%;
+  height: 520px;
 }
 
-.hint {
-  margin: 10px 12px 0;
-  padding: 10px 12px;
-  border: 1px solid rgba(0,0,0,.10);
+/* Légende */
+.mapLegend {
+  display: flex;
+  gap: 14px;
+  padding: 10px 14px;
+  font-size: 12px;
+  background: rgba(0, 0, 0, 0.03);
+
+  .lgDot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 6px;
+
+    &.ok { background: #2e7d32; }
+    &.off { background: #c62828; }
+    &.last { background: #ff9800; }
+  }
+}
+
+/* LISTE */
+.panel {
+  border-radius: 18px;
+}
+
+.equip-item {
   border-radius: 12px;
-  background: rgba(33,150,243,0.07);
-  font-size: 13px;
+  margin-bottom: 8px;
+  transition: background 0.15s ease;
+  cursor: pointer;
+
+  &:hover {
+    background: rgba(0, 0, 0, 0.04);
+  }
+
+  &.selected {
+    background: rgba(33, 150, 243, 0.14);
+  }
+
+  .dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    margin-right: 10px;
+
+    &.active { background: #2e7d32; }
+    &.inactive { background: #c62828; }
+  }
+
+  .main {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .eui {
+    font-weight: 800;
+    font-size: 13px;
+  }
+
+  .meta {
+    font-size: 12px;
+    opacity: 0.7;
+    margin-top: 2px;
+  }
+
+  .badge {
+    font-size: 11px;
+    font-weight: 800;
+    padding: 4px 8px;
+    border-radius: 999px;
+
+    &.ok {
+      background: rgba(46, 125, 50, 0.15);
+      color: #2e7d32;
+    }
+
+    &.off {
+      background: rgba(198, 40, 40, 0.15);
+      color: #c62828;
+    }
+  }
+}
+
+.empty {
+  padding: 16px;
+  text-align: center;
+  opacity: 0.7;
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+  :host ::ng-deep app-fleet-map.map {
+    height: 420px;
+  }
 }

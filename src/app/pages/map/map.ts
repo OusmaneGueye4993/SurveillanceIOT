@@ -1,37 +1,39 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Subscription } from 'rxjs';
+import { Observable, Subscription } from 'rxjs';
 
-import { MatButtonModule } from '@angular/material/button';
-import { MatButtonToggleModule } from '@angular/material/button-toggle';
+import { MatCardModule } from '@angular/material/card';
+import { MatListModule } from '@angular/material/list';
+import { MatDividerModule } from '@angular/material/divider';
+import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 
 import { FleetMapComponent } from '../../shared/fleet-map/fleet-map';
 import { TelemetryApiService } from '../../core/api/telemetry-api.service';
-import { TelemetryStoreService } from '../../core/store/telemetry-store.service';
-
-type Speed = 1 | 2 | 5;
+import { TelemetryStoreService, DeviceSummary } from '../../core/store/telemetry-store.service';
 
 @Component({
   selector: 'app-map',
   standalone: true,
-  imports: [CommonModule, MatButtonModule, MatButtonToggleModule, FleetMapComponent],
+  imports: [
+    CommonModule,
+    MatCardModule,
+    MatListModule,
+    MatDividerModule,
+    MatSlideToggleModule,
+    FleetMapComponent,
+  ],
   templateUrl: './map.html',
   styleUrls: ['./map.scss'],
 })
 export class MapComponent implements OnInit, OnDestroy {
-  deviceEui: string | null = null;
+  status$!: Observable<'disconnected' | 'connecting' | 'connected'>;
+  filtered$!: Observable<DeviceSummary[]>;
+  selected$!: Observable<string | null>;
 
+  showHistory = true;
   history: any[] = [];
-  playing = false;
-  speed: Speed = 1;
-
-  currentLat: number | null = null;
-  currentLng: number | null = null;
-  active = true;
 
   private sub = new Subscription();
-  private replayTimer?: number;
-  private replayIndex = 0;
 
   constructor(
     private api: TelemetryApiService,
@@ -39,77 +41,38 @@ export class MapComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
-    // assure MQTT connecté (pour live marker)
+    // ✅ expose les observables utilisés dans map.html
+    this.status$ = this.store.status$;
+    this.filtered$ = this.store.filtered$;
+    this.selected$ = this.store.selected$;
+
     this.store.connectMqtt();
 
-    // si pas de selected, prendre le premier device reçu
+    // ✅ quand selected change => charger historique
     this.sub.add(
-      this.store.devices$.subscribe((devices) => {
-        if (this.deviceEui) return;
-        if (devices.length > 0) this.store.select(devices[0].device_eui);
-      })
-    );
-
-    // quand selected change => reload history
-    this.sub.add(
-      this.store.selected$.subscribe((eui) => {
-        if (!eui) return;
-        if (this.deviceEui === eui) return;
-
-        this.deviceEui = eui;
-        this.stopReplay();
+      this.selected$.subscribe((eui) => {
+        if (!eui) {
+          this.history = [];
+          return;
+        }
         this.loadHistory(eui);
-        this.syncLivePoint(eui);
-      })
-    );
-
-    // live update marker (hors replay)
-    this.sub.add(
-      this.store.devices$.subscribe(() => {
-        if (!this.deviceEui) return;
-        this.syncLivePoint(this.deviceEui);
       })
     );
   }
 
   ngOnDestroy(): void {
-    this.stopReplay();
     this.sub.unsubscribe();
   }
 
-  get hasTrajectory(): boolean {
-    return Array.isArray(this.history) && this.history.length >= 2;
-  }
-
-  get devices(): any[] {
-    if (!this.deviceEui) return [];
-    return [
-      {
-        device_eui: this.deviceEui,
-        active: this.active,
-        last: { lat: this.currentLat, lng: this.currentLng },
-      },
-    ];
-  }
-
-  private syncLivePoint(eui: string) {
-    const snap = this.store.getDeviceSnapshot(eui);
-    if (!snap) return;
-
-    this.active = snap.active;
-    if (this.playing) return;
-
-    if (snap.last.lat != null && snap.last.lng != null) {
-      this.currentLat = snap.last.lat;
-      this.currentLng = snap.last.lng;
-    }
+  onSelect(eui: string) {
+    this.store.select(eui);
   }
 
   private loadHistory(eui: string) {
     this.api.getHistory(eui, 1500).subscribe((res: any) => {
       const raw = Array.isArray(res?.history) ? res.history : [];
 
-      // clean + dedupe consecutive
+      // clean + dedupe
       const eps = 1e-7;
       const cleaned: any[] = [];
       for (const p of raw) {
@@ -124,66 +87,22 @@ export class MapComponent implements OnInit, OnDestroy {
       }
 
       this.history = cleaned;
-
-      const first = this.history[0];
-      if (first && (this.currentLat == null || this.currentLng == null)) {
-        this.currentLat = first.lat;
-        this.currentLng = first.lng;
-      }
     });
   }
 
-  // Replay
-  play() {
-    if (!this.hasTrajectory) return;
-    this.playing = true;
-    if (this.replayIndex >= this.history.length - 1) this.replayIndex = 0;
-    this.tick();
+  trackByEui(_: number, d: DeviceSummary) {
+    return d.device_eui;
   }
 
-  pause() {
-    this.playing = false;
-    if (this.replayTimer) window.clearTimeout(this.replayTimer);
-    this.replayTimer = undefined;
+  secondsAgo(ms: number): string {
+    const s = Math.max(0, Math.round((Date.now() - ms) / 1000));
+    return `${s}s`;
   }
 
-  stopReplay() {
-    this.pause();
-    this.replayIndex = 0;
-
-    if (this.deviceEui) this.syncLivePoint(this.deviceEui);
-
-    const first = this.history?.[0];
-    if (!this.currentLat && first) this.currentLat = first.lat;
-    if (!this.currentLng && first) this.currentLng = first.lng;
-  }
-
-  setSpeed(v: Speed) {
-    this.speed = v;
-    if (this.playing) {
-      this.pause();
-      this.play();
-    }
-  }
-
-  private tick() {
-    if (!this.playing) return;
-    if (!this.hasTrajectory) return;
-
-    const p = this.history[this.replayIndex];
-    if (p) {
-      this.currentLat = p.lat;
-      this.currentLng = p.lng;
-    }
-
-    this.replayIndex++;
-    if (this.replayIndex >= this.history.length) {
-      this.pause();
-      return;
-    }
-
-    const base = 600;
-    const wait = Math.max(80, Math.round(base / this.speed));
-    this.replayTimer = window.setTimeout(() => this.tick(), wait);
+  fmt(v: any, digits = 0): string {
+    const n = Number(v);
+    if (!Number.isFinite(n)) return '—';
+    if (Number.isInteger(n)) return String(n);
+    return n.toFixed(digits);
   }
 }

@@ -28,13 +28,16 @@ type AlertItem = { level: 'critical' | 'warn'; message: string };
   imports: [
     CommonModule,
     ReactiveFormsModule,
-
+    CommonModule,
+    ReactiveFormsModule,
+    MatIconModule,
+    MatButtonModule,
+    FleetMapComponent,
     MatCardModule,
     MatIconModule,
     MatFormFieldModule,
     MatInputModule,
     MatButtonModule,
-
     FleetMapComponent,
     MiniMapComponent,
     TelemetryChartComponent,

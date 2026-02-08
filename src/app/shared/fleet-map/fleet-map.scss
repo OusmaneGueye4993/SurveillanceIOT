@@ -45,3 +45,22 @@
   background: transparent !important;
   border: none !important;
 }
+
+.fleet-map {
+  width: 100%;
+  height: 100%;
+  border-radius: 18px;
+  overflow: hidden;
+}
+
+/* évite que Leaflet mette un fond/grille moche */
+:host ::ng-deep .leaflet-container {
+  background: #f5f6f7;
+}
+
+/* optionnel */
+:host ::ng-deep .dot-icon,
+:host ::ng-deep .last-point-icon {
+  background: transparent !important;
+  border: none !important;
+}
