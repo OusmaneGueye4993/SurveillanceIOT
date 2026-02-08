@@ -1,5 +1,75 @@
-<h2>Dashboard</h2>
+<!-- ✅ NOUVEAU : Flotte -->
+<div class="fleet-header">
+  <div class="fleet-title">
+    <h2>Dashboard</h2>
+    <div class="sub">
+      <span>Flotte en temps réel</span>
+      <span class="sep">•</span>
+      <span>Statut MQTT: <b>{{ status$ | async }}</b></span>
+    </div>
+  </div>
 
+  <mat-form-field appearance="outline" class="search">
+    <mat-label>Rechercher un équipement</mat-label>
+    <input matInput [formControl]="searchCtrl" placeholder="ex: 70B3D57E..." />
+    <mat-icon matSuffix>search</mat-icon>
+  </mat-form-field>
+</div>
+
+<ng-container *ngIf="(filtered$ | async) as devices">
+  <mat-card class="fleet-list-card">
+    <mat-card-title>Équipements ({{ devices.length }})</mat-card-title>
+    <mat-card-content>
+
+      <div class="equip-list" *ngIf="devices.length > 0; else emptyState">
+        <ng-container *ngIf="(selected$ | async) as selected">
+          <button
+            mat-stroked-button
+            class="equip-item"
+            *ngFor="let d of devices; trackBy: trackByEui"
+            (click)="onSelect(d.device_eui)"
+            [class.active]="d.active"
+            [class.inactive]="!d.active"
+            [class.selected]="d.device_eui === selected"
+          >
+            <span class="dot"></span>
+            <span class="eui">{{ d.device_eui }}</span>
+            <span class="meta">
+              Bat: {{ fmt(d.last.battery, 0) }}% • RSSI: {{ fmt(d.last.rssi, 0) }} • vu il y a {{ secondsAgo(d.lastSeenMs) }}
+            </span>
+          </button>
+        </ng-container>
+      </div>
+
+      <ng-template #emptyState>
+        <div class="hint">
+          Aucun équipement reçu. Lance ton simulateur MQTT ou vérifie le topic <b>drone/telemetry</b>.
+        </div>
+      </ng-template>
+
+    </mat-card-content>
+  </mat-card>
+
+  <mat-card class="map-card fleet-map-card">
+    <mat-card-title>Carte flotte</mat-card-title>
+    <mat-card-content>
+      <ng-container *ngIf="(selected$ | async) as selected">
+        <app-fleet-map
+          [follow]="false"
+          [devices]="mapDevices(devices)"
+          [selected]="selected"
+          (selectDevice)="onSelect($event)">
+        </app-fleet-map>
+
+        <div class="map-hint">
+          Vert = actif • Rouge = inactif • Clique un marker ou un équipement pour sélectionner
+        </div>
+      </ng-container>
+    </mat-card-content>
+  </mat-card>
+</ng-container>
+
+<!-- ✅ Ton dashboard existant (KPI/Map/Chart/Alerts) -->
 <p>Statut MQTT: <b>{{ status$ | async }}</b></p>
 
 <ng-container *ngIf="(telemetry$ | async) as t; else noData">
@@ -82,32 +152,13 @@
               </div>
 
               <div class="kpi-right">
-                <div class="kpi-value small">{{ fmt(t?.lat, 4) }}, {{ fmt(t?.lng, 4) }}</div>
+                <div class="kpi-value small">{{ fmt(t?.lat, 2) }}, {{ fmt(t?.lng, 2) }}</div>
               </div>
             </mat-card-content>
           </mat-card>
 
-          <!-- Carte (même composant que page Map) -->
-          <mat-card *ngIf="w.type === 'mini-map'" class="wide map-card">
-            <mat-card-title>{{ w.title }}</mat-card-title>
-            <mat-card-content class="map-container">
-              <app-fleet-map
-                [follow]="false"
-                [selected]="selected"
-                [history]="history"
-                [devices]="[
-                  {
-                    device_eui: (t?.device_eui ?? deviceEui),
-                    active: true,
-                    last: { lat: t?.lat, lng: t?.lng }
-                  }
-                ]"
-                (selectDevice)="onSelectDevice($event)">
-              </app-fleet-map>
-
-              <p class="hint">Carte : position GPS + historique (si disponible).</p>
-            </mat-card-content>
-          </mat-card>
+          <!-- Carte -->
+    
 
           <!-- Graphique -->
           <mat-card *ngIf="w.type === 'chart-telemetry'" class="wide">
@@ -127,8 +178,7 @@
             <mat-card-content>
               <div *ngIf="alerts$ | async as a">
                 <p *ngIf="a.length === 0" class="hint">Aucune alerte.</p>
-                <div *ngFor="let item of a"
-                     class="alert"
+                <div *ngFor="let item of a" class="alert"
                      [class.critical]="item.level === 'critical'"
                      [class.warn]="item.level === 'warn'">
                   <b>{{ item.level }}</b> — {{ item.message }}

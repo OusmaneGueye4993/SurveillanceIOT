@@ -13,8 +13,8 @@
   gap: 10px;
 }
 
-.status {
-  opacity: 0.8;
+.sub {
+  opacity: 0.75;
   font-size: 13px;
 }
 
@@ -35,10 +35,6 @@
   padding: 10px 12px;
   border: 1px solid rgba(0,0,0,.10);
   border-radius: 12px;
-  background: rgba(255, 193, 7, 0.10);
+  background: rgba(33,150,243,0.07);
   font-size: 13px;
-}
-
-.muted {
-  opacity: 0.8;
 }

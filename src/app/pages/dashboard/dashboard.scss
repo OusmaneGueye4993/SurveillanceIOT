@@ -1,32 +1,194 @@
+/* ===========================
+   Dashboard - Style amélioré
+   =========================== */
+
+:host {
+  display: block;
+}
+
+/* -------- Header flotte -------- */
+.fleet-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 16px;
+}
+
+.fleet-title {
+  h2 {
+    margin: 0;
+    font-size: 26px;
+    font-weight: 650;
+    letter-spacing: 0.2px;
+  }
+}
+
+.sub {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 13px;
+  margin-top: 4px;
+  color: rgba(0, 0, 0, 0.65);
+
+  .sep {
+    opacity: 0.5;
+  }
+
+  b {
+    color: #2e7d32; /* MQTT ok */
+  }
+}
+
+.search {
+  width: min(460px, 100%);
+}
+
+/* -------- Cartes -------- */
+mat-card {
+  border-radius: 18px;
+}
+
+.fleet-list-card {
+  margin-bottom: 16px;
+}
+
+/* -------- Chips équipements -------- */
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  border-radius: 999px;
+  padding: 10px 14px;
+  text-transform: none;
+  line-height: 1.1;
+  border-width: 2px;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 22px rgba(0, 0, 0, 0.10);
+  }
+}
+
+.dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+  background: rgba(0, 0, 0, 0.25);
+}
+
+.eui {
+  font-weight: 800;
+  font-size: 12px;
+  letter-spacing: 0.2px;
+}
+
+.meta {
+  opacity: 0.85;
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.62);
+}
+
+/* états */
+.chip.active {
+  border-color: #2e7d32;
+
+  .dot {
+    background: #2e7d32;
+  }
+}
+
+.chip.inactive {
+  border-color: #c62828;
+  opacity: 0.85;
+
+  .dot {
+    background: #c62828;
+  }
+}
+
+.chip.selected {
+  background: rgba(33, 150, 243, 0.10);
+  border-color: #2196f3;
+  box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.22);
+
+  .dot {
+    background: #2196f3;
+  }
+}
+
+/* -------- Carte flotte -------- */
+.fleet-map-card {
+  margin-bottom: 22px;
+
+  mat-card-title {
+    font-weight: 650;
+  }
+
+  mat-card-content {
+    padding: 0; /* la carte prend tout */
+  }
+
+  app-fleet-map {
+    display: block;
+    height: 420px;
+    border-radius: 0 0 18px 18px;
+    overflow: hidden;
+  }
+}
+
+.map-hint {
+  padding: 10px 14px;
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.62);
+  background: rgba(0, 0, 0, 0.03);
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+/* -------- Hints -------- */
+.hint {
+  opacity: 0.8;
+  font-size: 13px;
+}
+
+/* -------- Widgets existants (KPI/Map/Chart/Alerts) -------- */
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 16px;
-  margin-top: 16px;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 14px;
 }
 
+/* KPI cards */
 .kpi {
-  text-align: center;
-}
-
-.value {
-  font-size: 28px;
-  font-weight: bold;
-  margin-top: 8px;
-}
-
-.kpi {
+  grid-column: span 3;
   border-radius: 18px;
-  box-shadow: 0 10px 30px rgba(0,0,0,.08);
-  overflow: hidden;
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 26px rgba(0, 0, 0, 0.12);
+  }
 }
 
+.wide {
+  grid-column: span 12;
+  border-radius: 18px;
+}
+
+/* KPI layout */
 .kpi-content {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  padding: 16px 16px;
 }
 
 .kpi-left {
@@ -41,67 +203,42 @@
   border-radius: 14px;
   display: grid;
   place-items: center;
+  background: rgba(0, 0, 0, 0.06);
+
+  mat-icon {
+    font-size: 22px;
+  }
 }
 
 .kpi-title {
-  font-weight: 700;
-  font-size: 14px;
-  line-height: 1.1;
+  font-weight: 800;
 }
 
 .kpi-sub {
-  font-size: 12px;
   opacity: 0.75;
-  margin-top: 2px;
+  font-size: 12px;
 }
 
-.kpi-right .kpi-value {
-  font-weight: 800;
-  font-size: 22px;
-  letter-spacing: -0.3px;
+.kpi-value {
+  font-weight: 900;
+  font-size: 24px;
 }
 
-.kpi-right .kpi-value.small {
-  font-size: 18px;
+.kpi-value.small {
+  font-size: 14px;
 }
 
-/* 🎨 Couleurs par KPI */
+/* Batterie OK / LOW (tu as déjà les classes côté HTML) */
 .kpi-battery {
-  background: linear-gradient(135deg, rgba(76,175,80,.14), rgba(76,175,80,.02));
-}
-.kpi-battery .kpi-icon {
-  background: rgba(76,175,80,.18);
+  background: rgba(46, 125, 50, 0.10);
 }
 
-.kpi-temp {
-  background: linear-gradient(135deg, rgba(255,152,0,.18), rgba(255,152,0,.02));
-}
-.kpi-temp .kpi-icon {
-  background: rgba(255,152,0,.22);
+.kpi-battery-low {
+  background: rgba(198, 40, 40, 0.10);
 }
 
-.kpi-rssi {
-  background: linear-gradient(135deg, rgba(33,150,243,.18), rgba(33,150,243,.02));
-}
-.kpi-rssi .kpi-icon {
-  background: rgba(33,150,243,.22);
-}
+/* Alertes */
+.alert {
+  padding: 10px
 
-.kpi-gps {
-  background: linear-gradient(135deg, rgba(156,39,176,.16), rgba(156,39,176,.02));
-}
-.kpi-gps .kpi-icon {
-  background: rgba(156,39,176,.22);
-}
-
-.grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 16px;
-  align-items: stretch;
-}
-
-/* Les widgets larges prennent toute la ligne */
-.wide {
-  grid-column: 1 / -1;
 }

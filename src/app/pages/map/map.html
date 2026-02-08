@@ -1,7 +1,7 @@
 <div class="toolbar">
   <div class="left">
-    <b>Carte GPS</b>
-    <span class="status">MQTT: {{ status$ | async }}</span>
+    <b>Trajet</b>
+    <span class="sub" *ngIf="deviceEui">Équipement: <b>{{ deviceEui }}</b></span>
   </div>
 
   <div class="right">
@@ -9,11 +9,7 @@
     <button mat-stroked-button (click)="pause()" [disabled]="!playing">⏸ Pause</button>
     <button mat-stroked-button (click)="stopReplay()" [disabled]="!hasTrajectory">⏹ Stop</button>
 
-    <mat-button-toggle-group
-      [value]="speed"
-      (valueChange)="setSpeed($event)"
-      aria-label="Speed"
-    >
+    <mat-button-toggle-group [value]="speed" (valueChange)="setSpeed($event)" aria-label="Speed">
       <mat-button-toggle [value]="1">x1</mat-button-toggle>
       <mat-button-toggle [value]="2">x2</mat-button-toggle>
       <mat-button-toggle [value]="5">x5</mat-button-toggle>
@@ -21,15 +17,15 @@
   </div>
 </div>
 
-<div class="hint" *ngIf="!hasTrajectory">
-  <b>Trajectoire non visible :</b> il faut au moins <b>2 points GPS différents</b> dans l’historique.
-  <span class="muted">(Si tes points sont identiques, la ligne est “invisible”.)</span>
+<div class="hint" *ngIf="deviceEui && !hasTrajectory">
+  Pas assez de points distincts pour tracer la trajectoire (min 2).
+  Vérifie que l’historique DB augmente.
 </div>
 
 <app-fleet-map
   class="map-host"
   [follow]="true"
-  [selected]="selected"
+  [selected]="deviceEui"
   [history]="history"
   [devices]="devices">
 </app-fleet-map>

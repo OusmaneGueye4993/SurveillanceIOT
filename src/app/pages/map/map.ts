@@ -1,26 +1,15 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Observable, Subscription } from 'rxjs';
-
-import { MqttService } from '../../core/mqtt/mqtt.service';
-import { TelemetryApiService } from '../../core/api/telemetry-api.service';
+import { Subscription } from 'rxjs';
 
 import { MatButtonModule } from '@angular/material/button';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 
 import { FleetMapComponent } from '../../shared/fleet-map/fleet-map';
+import { TelemetryApiService } from '../../core/api/telemetry-api.service';
+import { TelemetryStoreService } from '../../core/store/telemetry-store.service';
 
 type Speed = 1 | 2 | 5;
-
-type HistoryPoint = {
-  ts?: number;
-  lat: number;
-  lng: number;
-  temp?: number | null;
-  battery?: number | null;
-  rssi?: number | null;
-  snr?: number | null;
-};
 
 @Component({
   selector: 'app-map',
@@ -30,81 +19,70 @@ type HistoryPoint = {
   styleUrls: ['./map.scss'],
 })
 export class MapComponent implements OnInit, OnDestroy {
-  status$!: Observable<'disconnected' | 'connecting' | 'connected'>;
+  deviceEui: string | null = null;
 
-  deviceEui = '70B3D57ED0074DF2';
-
-  /** Historique brut API */
-  historyRaw: any[] = [];
-
-  /** Historique nettoyé + dédoublonné (utilisé pour polyline + replay) */
-  history: HistoryPoint[] = [];
-
+  history: any[] = [];
   playing = false;
   speed: Speed = 1;
 
-  selected: string | null = this.deviceEui;
-
-  // point courant (replay ou live)
   currentLat: number | null = null;
   currentLng: number | null = null;
   active = true;
 
-  private mqttSub?: Subscription;
-
+  private sub = new Subscription();
   private replayTimer?: number;
   private replayIndex = 0;
 
-  constructor(private api: TelemetryApiService, private mqtt: MqttService) {
-    this.status$ = this.mqtt.status$;
-  }
+  constructor(
+    private api: TelemetryApiService,
+    private store: TelemetryStoreService
+  ) {}
 
   ngOnInit(): void {
-    // 1) Charger historique (trajet) depuis Django
-    this.api.getHistory(this.deviceEui, 1000).subscribe((res: any) => {
-      this.historyRaw = Array.isArray(res?.history) ? res.history : [];
-      this.history = this.sanitizeAndDedupeHistory(this.historyRaw);
+    // assure MQTT connecté (pour live marker)
+    this.store.connectMqtt();
 
-      // Positionner le marker au 1er point valide (si disponible)
-      const first = this.history?.[0];
-      if (first) {
-        this.currentLat = first.lat;
-        this.currentLng = first.lng;
-      } else {
-        // fallback : si pas d’historique, on garde null et MQTT fera bouger
-        this.currentLat = null;
-        this.currentLng = null;
-      }
-    });
+    // si pas de selected, prendre le premier device reçu
+    this.sub.add(
+      this.store.devices$.subscribe((devices) => {
+        if (this.deviceEui) return;
+        if (devices.length > 0) this.store.select(devices[0].device_eui);
+      })
+    );
 
-    // 2) MQTT live (marker bouge en live)
-    this.mqtt.connect();
-    this.mqttSub = this.mqtt.telemetry$.subscribe((t) => {
-      // si on joue le replay, on ignore le live pour éviter conflits visuels
-      if (this.playing) return;
+    // quand selected change => reload history
+    this.sub.add(
+      this.store.selected$.subscribe((eui) => {
+        if (!eui) return;
+        if (this.deviceEui === eui) return;
 
-      const lat = Number(t?.lat);
-      const lng = Number(t?.lng);
-      if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+        this.deviceEui = eui;
+        this.stopReplay();
+        this.loadHistory(eui);
+        this.syncLivePoint(eui);
+      })
+    );
 
-      this.currentLat = lat;
-      this.currentLng = lng;
-      this.active = true;
-    });
+    // live update marker (hors replay)
+    this.sub.add(
+      this.store.devices$.subscribe(() => {
+        if (!this.deviceEui) return;
+        this.syncLivePoint(this.deviceEui);
+      })
+    );
   }
 
   ngOnDestroy(): void {
     this.stopReplay();
-    this.mqttSub?.unsubscribe();
+    this.sub.unsubscribe();
   }
 
-  /** Indique si on a assez de points pour tracer une trajectoire */
   get hasTrajectory(): boolean {
     return Array.isArray(this.history) && this.history.length >= 2;
   }
 
-  // Devices array pour FleetMap
   get devices(): any[] {
+    if (!this.deviceEui) return [];
     return [
       {
         device_eui: this.deviceEui,
@@ -114,17 +92,52 @@ export class MapComponent implements OnInit, OnDestroy {
     ];
   }
 
-  // ---------- Replay controls ----------
+  private syncLivePoint(eui: string) {
+    const snap = this.store.getDeviceSnapshot(eui);
+    if (!snap) return;
+
+    this.active = snap.active;
+    if (this.playing) return;
+
+    if (snap.last.lat != null && snap.last.lng != null) {
+      this.currentLat = snap.last.lat;
+      this.currentLng = snap.last.lng;
+    }
+  }
+
+  private loadHistory(eui: string) {
+    this.api.getHistory(eui, 1500).subscribe((res: any) => {
+      const raw = Array.isArray(res?.history) ? res.history : [];
+
+      // clean + dedupe consecutive
+      const eps = 1e-7;
+      const cleaned: any[] = [];
+      for (const p of raw) {
+        const lat = Number(p?.lat);
+        const lng = Number(p?.lng);
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
+
+        const prev = cleaned[cleaned.length - 1];
+        if (prev && Math.abs(prev.lat - lat) < eps && Math.abs(prev.lng - lng) < eps) continue;
+
+        cleaned.push({ ...p, lat, lng });
+      }
+
+      this.history = cleaned;
+
+      const first = this.history[0];
+      if (first && (this.currentLat == null || this.currentLng == null)) {
+        this.currentLat = first.lat;
+        this.currentLng = first.lng;
+      }
+    });
+  }
+
+  // Replay
   play() {
     if (!this.hasTrajectory) return;
-
     this.playing = true;
-
-    // si fin -> recommencer
-    if (this.replayIndex >= this.history.length - 1) {
-      this.replayIndex = 0;
-    }
-
+    if (this.replayIndex >= this.history.length - 1) this.replayIndex = 0;
     this.tick();
   }
 
@@ -138,11 +151,11 @@ export class MapComponent implements OnInit, OnDestroy {
     this.pause();
     this.replayIndex = 0;
 
+    if (this.deviceEui) this.syncLivePoint(this.deviceEui);
+
     const first = this.history?.[0];
-    if (first) {
-      this.currentLat = first.lat;
-      this.currentLng = first.lng;
-    }
+    if (!this.currentLat && first) this.currentLat = first.lat;
+    if (!this.currentLng && first) this.currentLng = first.lng;
   }
 
   setSpeed(v: Speed) {
@@ -164,61 +177,13 @@ export class MapComponent implements OnInit, OnDestroy {
     }
 
     this.replayIndex++;
-
     if (this.replayIndex >= this.history.length) {
       this.pause();
       return;
     }
 
-    const base = 600; // 0.6s par point en x1
+    const base = 600;
     const wait = Math.max(80, Math.round(base / this.speed));
     this.replayTimer = window.setTimeout(() => this.tick(), wait);
-  }
-
-  // ---------- History sanitization ----------
-  private sanitizeAndDedupeHistory(raw: any[]): HistoryPoint[] {
-    // 1) convert to numbers + filter invalid
-    const cleaned: HistoryPoint[] = (raw || [])
-      .map((p: any) => {
-        const lat = Number(p?.lat);
-        const lng = Number(p?.lng);
-        if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
-
-        const ts = p?.ts != null ? Number(p.ts) : undefined;
-
-        return {
-          ts: Number.isFinite(ts as number) ? (ts as number) : undefined,
-          lat,
-          lng,
-          temp: this.toNumOrNull(p?.temp),
-          battery: this.toNumOrNull(p?.battery),
-          rssi: this.toNumOrNull(p?.rssi),
-          snr: this.toNumOrNull(p?.snr),
-        } as HistoryPoint;
-      })
-      .filter(Boolean) as HistoryPoint[];
-
-    // 2) dedupe consecutive points (same coords) with a small epsilon
-    const eps = 1e-7;
-    const deduped: HistoryPoint[] = [];
-    for (const pt of cleaned) {
-      const prev = deduped[deduped.length - 1];
-      if (!prev) {
-        deduped.push(pt);
-        continue;
-      }
-      const same =
-        Math.abs(prev.lat - pt.lat) < eps &&
-        Math.abs(prev.lng - pt.lng) < eps;
-
-      if (!same) deduped.push(pt);
-    }
-
-    return deduped;
-  }
-
-  private toNumOrNull(v: any): number | null {
-    const n = Number(v);
-    return Number.isFinite(n) ? n : null;
   }
 }
