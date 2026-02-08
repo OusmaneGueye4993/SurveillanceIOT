@@ -10,11 +10,27 @@
       </div>
     </div>
 
-    <mat-slide-toggle
-      [checked]="showHistory"
-      (change)="showHistory = $event.checked">
-      Afficher historique
-    </mat-slide-toggle>
+    <div class="topActions">
+      <mat-button-toggle-group
+        [value]="(windowKey$ | async) ?? '1h'"
+        (change)="setWindow($event.value)"
+        class="winGroup"
+        aria-label="Fenêtre historique"
+      >
+        <mat-button-toggle value="15m">15 min</mat-button-toggle>
+        <mat-button-toggle value="1h">1 h</mat-button-toggle>
+        <mat-button-toggle value="6h">6 h</mat-button-toggle>
+        <mat-button-toggle value="24h">24 h</mat-button-toggle>
+      </mat-button-toggle-group>
+
+      <button mat-stroked-button (click)="refresh()">
+        Rafraîchir
+      </button>
+
+      <mat-slide-toggle [checked]="showHistory" (change)="showHistory = $event.checked">
+        Historique
+      </mat-slide-toggle>
+    </div>
   </div>
 
   <!-- MAP EN HAUT -->
@@ -28,16 +44,24 @@
           [devices]="devices"
           [selected]="(selected$ | async) ?? null"
           [history]="history ?? null"
-          [follow]="true"
+          [follow]="follow"
           [showHistory]="showHistory"
           (selectDevice)="onSelect($event)">
         </app-fleet-map>
       </ng-container>
 
-      <div class="mapLegend">
-        <span><span class="lgDot ok"></span> Actif</span>
-        <span><span class="lgDot off"></span> Inactif</span>
-        <span><span class="lgDot last"></span> Dernier point</span>
+      <div class="mapFooter">
+        <div class="legend">
+          <span><span class="lgDot ok"></span> Actif</span>
+          <span><span class="lgDot off"></span> Inactif</span>
+          <span><span class="lgDot last"></span> Dernier point</span>
+        </div>
+
+        <div class="histState">
+          <span class="pill" *ngIf="loadingHistory">Chargement…</span>
+          <span class="pill off" *ngIf="historyError">{{ historyError }}</span>
+          <span class="pill" *ngIf="!loadingHistory && !historyError">Points: <b>{{ history?.length || 0 }}</b></span>
+        </div>
       </div>
     </mat-card-content>
   </mat-card>
@@ -46,9 +70,7 @@
   <mat-card class="panel">
     <mat-card-title>
       Équipements
-      <span class="count" *ngIf="(filtered$ | async) as d">
-        ({{ d.length }})
-      </span>
+      <span class="count" *ngIf="(filtered$ | async) as d">({{ d.length }})</span>
     </mat-card-title>
 
     <mat-card-content>
@@ -62,11 +84,7 @@
               (click)="onSelect(d.device_eui)"
               [class.selected]="d.device_eui === selected">
 
-              <span
-                class="dot"
-                [class.active]="d.active"
-                [class.inactive]="!d.active">
-              </span>
+              <span class="dot" [class.active]="d.active" [class.inactive]="!d.active"></span>
 
               <div class="main">
                 <div class="eui">{{ d.device_eui }}</div>
@@ -86,9 +104,7 @@
       </ng-container>
 
       <ng-template #emptyState>
-        <div class="empty">
-          Aucun équipement reçu.
-        </div>
+        <div class="empty">Aucun équipement reçu.</div>
       </ng-template>
     </mat-card-content>
   </mat-card>

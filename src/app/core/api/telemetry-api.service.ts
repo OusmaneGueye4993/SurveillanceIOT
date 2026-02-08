@@ -36,13 +36,28 @@ export class TelemetryApiService {
 
   constructor(private http: HttpClient) {}
 
-  getHistory(deviceEui: string, limit = 300): Observable<TelemetryHistoryResponse> {
-    const params = new HttpParams().set('limit', String(limit));
-    return this.http.get<TelemetryHistoryResponse>(
-      `${this.base}/v1/telemetry/history/${encodeURIComponent(deviceEui)}/`,
-      { params }
-    );
-  }
+  /**
+   * ✅ Pro: supporte now:
+   * - limit
+   * - from (ts en secondes)
+   * - to (ts en secondes)
+   */
+  getHistory(
+  deviceEui: string,
+  opts?: { limit?: number; fromTs?: number; toTs?: number }
+): Observable<TelemetryHistoryResponse> {
+  const limit = opts?.limit ?? 300;
+
+  let params = new HttpParams().set('limit', String(limit));
+  if (opts?.fromTs != null) params = params.set('from', String(opts.fromTs));
+  if (opts?.toTs != null) params = params.set('to', String(opts.toTs));
+
+  return this.http.get<TelemetryHistoryResponse>(
+    `${this.base}/v1/telemetry/history/${encodeURIComponent(deviceEui)}/`,
+    { params }
+  );
+}
+
 
   getLatest(deviceEui: string): Observable<TelemetryLatestResponse> {
     return this.http.get<TelemetryLatestResponse>(

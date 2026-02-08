@@ -14,7 +14,8 @@
   h2 {
     margin: 0;
     font-size: 26px;
-    font-weight: 800;
+    font-weight: 850;
+    letter-spacing: -0.02em;
   }
 
   .sub {
@@ -24,6 +25,19 @@
     display: flex;
     gap: 6px;
     align-items: center;
+  }
+
+  .topActions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .winGroup {
+    border-radius: 999px;
+    overflow: hidden;
   }
 }
 
@@ -43,13 +57,22 @@
   height: 520px;
 }
 
-/* Légende */
-.mapLegend {
+.mapFooter {
   display: flex;
-  gap: 14px;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
   padding: 10px 14px;
   font-size: 12px;
   background: rgba(0, 0, 0, 0.03);
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+
+  .legend {
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
 
   .lgDot {
     width: 10px;
@@ -61,6 +84,25 @@
     &.ok { background: #2e7d32; }
     &.off { background: #c62828; }
     &.last { background: #ff9800; }
+  }
+
+  .histState {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .pill {
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.05);
+    font-weight: 700;
+
+    &.off {
+      background: rgba(198, 40, 40, 0.12);
+      color: #c62828;
+    }
   }
 }
 
@@ -75,13 +117,8 @@
   transition: background 0.15s ease;
   cursor: pointer;
 
-  &:hover {
-    background: rgba(0, 0, 0, 0.04);
-  }
-
-  &.selected {
-    background: rgba(33, 150, 243, 0.14);
-  }
+  &:hover { background: rgba(0, 0, 0, 0.04); }
+  &.selected { background: rgba(33, 150, 243, 0.14); }
 
   .dot {
     width: 10px;
@@ -93,37 +130,18 @@
     &.inactive { background: #c62828; }
   }
 
-  .main {
-    flex: 1;
-    min-width: 0;
-  }
-
-  .eui {
-    font-weight: 800;
-    font-size: 13px;
-  }
-
-  .meta {
-    font-size: 12px;
-    opacity: 0.7;
-    margin-top: 2px;
-  }
+  .main { flex: 1; min-width: 0; }
+  .eui { font-weight: 850; font-size: 13px; }
+  .meta { font-size: 12px; opacity: 0.7; margin-top: 2px; }
 
   .badge {
     font-size: 11px;
-    font-weight: 800;
+    font-weight: 850;
     padding: 4px 8px;
     border-radius: 999px;
 
-    &.ok {
-      background: rgba(46, 125, 50, 0.15);
-      color: #2e7d32;
-    }
-
-    &.off {
-      background: rgba(198, 40, 40, 0.15);
-      color: #c62828;
-    }
+    &.ok { background: rgba(46, 125, 50, 0.15); color: #2e7d32; }
+    &.off { background: rgba(198, 40, 40, 0.15); color: #c62828; }
   }
 }
 
