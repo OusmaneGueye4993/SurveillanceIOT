@@ -1,21 +1,10 @@
 import { Injectable, OnDestroy } from '@angular/core';
 import { BehaviorSubject, combineLatest, map, Subscription, timer, Observable } from 'rxjs';
+
 import { MqttService } from '../mqtt/mqtt.service';
 import { DashboardSettingsService } from '../settings/dashboard-settings.service';
-
-export type DeviceSummary = {
-  device_eui: string;
-  last: {
-    lat: number | null;
-    lng: number | null;
-    temp?: number | null;
-    battery?: number | null;
-    rssi?: number | null;
-    ts?: number | null;
-  };
-  lastSeenMs: number;
-  active: boolean;
-};
+import { TelemetryApiService } from '../api/telemetry-api.service';
+import { DeviceSummary } from '../models/telemetry.models';
 
 @Injectable({ providedIn: 'root' })
 export class TelemetryStoreService implements OnDestroy {
@@ -47,11 +36,12 @@ export class TelemetryStoreService implements OnDestroy {
 
   constructor(
     private mqtt: MqttService,
-    private settings: DashboardSettingsService
+    private settings: DashboardSettingsService,
+    private api: TelemetryApiService
   ) {
     this.status$ = this.mqtt.status$;
 
-    // ✅ prend staleSeconds depuis la config Settings
+    // staleSeconds depuis config
     this.sub.add(
       this.settings.config$.subscribe((cfg) => {
         const sec = Number(cfg?.alertThresholds?.staleSeconds);
@@ -61,9 +51,9 @@ export class TelemetryStoreService implements OnDestroy {
       })
     );
 
-    // 1) écoute MQTT -> update Map
+    // MQTT -> update devices
     this.sub.add(
-      this.mqtt.telemetry$.subscribe((t) => {
+      this.mqtt.telemetry$.subscribe((t: any) => {
         const eui = String(t?.device_eui || '').trim();
         if (!eui) return;
 
@@ -73,43 +63,64 @@ export class TelemetryStoreService implements OnDestroy {
         const battery = this.numOrNull(t?.battery);
         const rssi = this.numOrNull(t?.rssi);
         const temp = this.numOrNull(t?.temp);
-        const ts = this.numOrNull(t?.ts);
+        const snr = this.numOrNull(t?.snr);
 
-        const now = Date.now();
+        let ts = this.numOrNull(t?.ts);
+        if (ts != null && ts > 1_000_000_000_000) ts = Math.floor(ts / 1000); // ms -> s
+        if (ts == null) ts = Math.floor(Date.now() / 1000);
+
+        const nowMs = Date.now();
         const prev = this.devicesMap.get(eui);
 
         const next: DeviceSummary = {
           device_eui: eui,
-          last: {
-            lat: lat ?? prev?.last.lat ?? null,
-            lng: lng ?? prev?.last.lng ?? null,
-            battery: battery ?? prev?.last.battery ?? null,
-            rssi: rssi ?? prev?.last.rssi ?? null,
-            temp: temp ?? prev?.last.temp ?? null,
-            ts: ts ?? prev?.last.ts ?? null,
-          },
-          lastSeenMs: now,
+
+          // normalisé
+          lat: lat ?? prev?.lat ?? null,
+          lng: lng ?? prev?.lng ?? null,
+          lastTs: ts ?? prev?.lastTs ?? null,
+          battery: battery ?? prev?.battery ?? null,
+          rssi: rssi ?? prev?.rssi ?? null,
+          temp: temp ?? prev?.temp ?? null,
+          snr: snr ?? prev?.snr ?? null,
+
           active: true,
+
+          // legacy compat
+          lastSeenMs: nowMs,
+          last: {
+            ts: ts ?? prev?.last?.ts ?? undefined,
+            lat: (lat ?? prev?.last?.lat ?? null) as any,
+            lng: (lng ?? prev?.last?.lng ?? null) as any,
+            battery: battery ?? prev?.last?.battery ?? null,
+            rssi: rssi ?? prev?.last?.rssi ?? null,
+            temp: temp ?? prev?.last?.temp ?? null,
+          },
         };
 
         this.devicesMap.set(eui, next);
 
+        // auto select first device
         if (!this.selectedSubject.value) {
           this.selectedSubject.next(eui);
         }
 
         this.emitDevices();
+
+        // persist backend (méthode 1)
+        this.api.ingest(t).subscribe({ error: () => {} });
       })
     );
 
-    // 2) recalcul actif/inactif
+    // recalcul actif/inactif
     this.sub.add(
       timer(0, 2000).subscribe(() => {
         const now = Date.now();
         let changed = false;
 
         for (const [eui, d] of this.devicesMap.entries()) {
-          const active = now - d.lastSeenMs <= this.activeTimeoutMs;
+          const lastSeen = d.lastSeenMs ?? now;
+          const active = now - lastSeen <= this.activeTimeoutMs;
           if (active !== d.active) {
             this.devicesMap.set(eui, { ...d, active });
             changed = true;
@@ -134,14 +145,10 @@ export class TelemetryStoreService implements OnDestroy {
     this.selectedSubject.next(eui);
   }
 
-  getDeviceSnapshot(eui: string): DeviceSummary | null {
-    return this.devicesMap.get(eui) ?? null;
-  }
-
   private emitDevices(): void {
     const arr = Array.from(this.devicesMap.values()).sort((a, b) => {
       if (a.active !== b.active) return a.active ? -1 : 1;
-      return b.lastSeenMs - a.lastSeenMs;
+      return (b.lastSeenMs ?? 0) - (a.lastSeenMs ?? 0);
     });
     this.devicesSubject.next(arr);
   }

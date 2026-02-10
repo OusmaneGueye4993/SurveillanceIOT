@@ -11,14 +11,16 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 
-import { TelemetryStoreService, DeviceSummary } from '../../core/store/telemetry-store.service';
+import { TelemetryStoreService } from '../../core/store/telemetry-store.service';
+import { DeviceSummary } from '../../core/models/telemetry.models';
+
 import { DashboardSettingsService } from '../../core/settings/dashboard-settings.service';
 
 import { FleetMapComponent } from '../../shared/fleet-map/fleet-map';
 
-// ⚠️ garde tes composants existants
+// garde tes composants existants
 import { MiniMapComponent } from '../../shared/mini-map/mini-map';
-import  { TelemetryChartComponent } from '../telemetry/telemetry';
+import { TelemetryChartComponent } from '../telemetry/telemetry';
 
 type AlertItem = { level: 'critical' | 'warn'; message: string };
 
@@ -28,16 +30,13 @@ type AlertItem = { level: 'critical' | 'warn'; message: string };
   imports: [
     CommonModule,
     ReactiveFormsModule,
-    CommonModule,
-    ReactiveFormsModule,
-    MatIconModule,
-    MatButtonModule,
-    FleetMapComponent,
+
     MatCardModule,
     MatIconModule,
     MatFormFieldModule,
     MatInputModule,
     MatButtonModule,
+
     FleetMapComponent,
     MiniMapComponent,
     TelemetryChartComponent,
@@ -46,7 +45,6 @@ type AlertItem = { level: 'critical' | 'warn'; message: string };
   styleUrls: ['./dashboard.scss'],
 })
 export class DashboardComponent implements OnInit, OnDestroy {
-  // Fleet
   status$!: Observable<'disconnected' | 'connecting' | 'connected'>;
   devices$!: Observable<DeviceSummary[]>;
   filtered$!: Observable<DeviceSummary[]>;
@@ -54,10 +52,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   searchCtrl = new FormControl<string>('', { nonNullable: true });
 
-  // ✅ pour ton HTML existant : cfg$ doit exister
   cfg$!: Observable<any>;
-
-  // ✅ pour ton HTML existant : telemetry$, alerts$, history
   telemetry$!: Observable<any | null>;
   alerts$!: Observable<AlertItem[]>;
   history: any[] = [];
@@ -75,33 +70,38 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.filtered$ = this.fleet.filtered$;
     this.selected$ = this.fleet.selected$;
 
-    // ✅ map config$ -> cfg$ pour rester compatible avec ton template
     this.cfg$ = this.settings.config$;
 
     this.fleet.connectMqtt();
 
-    // recherche
+    // Recherche (filtre liste)
     this.sub.add(
       this.searchCtrl.valueChanges
         .pipe(startWith(this.searchCtrl.value), debounceTime(150))
         .subscribe((v) => this.fleet.setSearch(v))
     );
 
-    // telemetry$ = snapshot du device sélectionné
+    // telemetry$ = snapshot du device sélectionné (format chart-friendly)
     this.telemetry$ = combineLatest([this.selected$, this.devices$]).pipe(
       map(([eui, devices]) => {
         if (!eui) return null;
         const d = devices.find((x) => x.device_eui === eui);
         if (!d) return null;
 
+        const ts = d.lastTs ?? (d.last?.ts ?? null);
+        const lat = d.lat ?? (d.last?.lat ?? null);
+        const lng = d.lng ?? (d.last?.lng ?? null);
+
+        if (ts == null || lat == null || lng == null) return null;
+
         return {
           device_eui: d.device_eui,
-          ts: d.last.ts ?? Math.floor(d.lastSeenMs / 1000),
-          lat: d.last.lat,
-          lng: d.last.lng,
-          temp: d.last.temp,
-          battery: d.last.battery,
-          rssi: d.last.rssi,
+          ts,
+          lat,
+          lng,
+          temp: d.temp ?? d.last?.temp ?? null,
+          battery: d.battery ?? d.last?.battery ?? null,
+          rssi: d.rssi ?? d.last?.rssi ?? null,
         };
       })
     );
@@ -113,7 +113,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       })
     );
 
-    // construire history pour chart (accumulation sur le device sélectionné)
+    // construire history pour chart (accumulation)
     this.sub.add(
       this.telemetry$.subscribe((t) => {
         if (!t) return;
@@ -131,7 +131,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       })
     );
 
-    // alerts (dépend des thresholds config)
+    // alerts (seuils depuis cfg)
     this.alerts$ = combineLatest([this.telemetry$, this.cfg$]).pipe(
       map(([t, cfg]) => {
         const out: AlertItem[] = [];
@@ -173,11 +173,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
     return d.device_eui;
   }
 
-  secondsAgo(ms: number): string {
-    const s = Math.max(0, Math.round((Date.now() - ms) / 1000));
-    return `${s}s`;
-  }
-
   fmt(v: any, digits = 0): string {
     const n = Number(v);
     if (!Number.isFinite(n)) return '—';
@@ -185,11 +180,26 @@ export class DashboardComponent implements OnInit, OnDestroy {
     return n.toFixed(digits);
   }
 
+
+  secondsAgo(ms: number | null | undefined): string {
+  if (!ms) return '—';
+  const s = Math.max(0, Math.round((Date.now() - ms) / 1000));
+  return `${s}s`;
+}
+
+
+
+  // ✅ adapte au FleetMap qui attend {device_eui, active, last:{lat,lng}}
   mapDevices(devices: DeviceSummary[]) {
-    return devices.map((d) => ({
-      device_eui: d.device_eui,
-      active: d.active,
-      last: { lat: d.last.lat, lng: d.last.lng },
-    }));
+    return devices
+      .filter((d) => (d.lat != null && d.lng != null) || (d.last?.lat != null && d.last?.lng != null))
+      .map((d) => ({
+        device_eui: d.device_eui,
+        active: d.active,
+        last: {
+          lat: d.lat ?? d.last?.lat ?? null,
+          lng: d.lng ?? d.last?.lng ?? null,
+        },
+      }));
   }
 }

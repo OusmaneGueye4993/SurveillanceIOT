@@ -1,17 +1,8 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, map } from 'rxjs';
 import { environment } from '../../../environments/environment';
-
-export interface TelemetryPoint {
-  ts: number;
-  lat: number;
-  lng: number;
-  temp?: number | null;
-  battery?: number | null;
-  rssi?: number | null;
-  snr?: number | null;
-}
+import { TelemetryPoint } from '../models/telemetry.models';
 
 export interface TelemetryHistoryResponse {
   device_eui: string;
@@ -19,49 +10,68 @@ export interface TelemetryHistoryResponse {
   history: TelemetryPoint[];
 }
 
-export interface TelemetryLatestResponse {
+export interface TelemetryLatestResponse extends TelemetryPoint {
   device_eui: string;
-  ts: number;
-  lat: number;
-  lng: number;
-  temp?: number | null;
-  battery?: number | null;
-  rssi?: number | null;
-  snr?: number | null;
 }
 
 @Injectable({ providedIn: 'root' })
 export class TelemetryApiService {
-  private base = environment.apiBaseUrl;
+  private base = environment.apiBaseUrl; // ex: http://localhost:8000/api
 
   constructor(private http: HttpClient) {}
 
-  /**
-   * ✅ Pro: supporte now:
-   * - limit
-   * - from (ts en secondes)
-   * - to (ts en secondes)
-   */
+  // --- helpers ---
+  private toNum(v: any): number | null {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : null;
+  }
+
+  private normalizePoint(dto: any): TelemetryPoint {
+    let ts = this.toNum(dto?.ts) ?? Math.floor(Date.now() / 1000);
+    if (ts > 1_000_000_000_000) ts = Math.floor(ts / 1000); // ms -> s
+
+    return {
+      ts,
+      lat: this.toNum(dto?.lat) ?? 0,
+      lng: this.toNum(dto?.lng) ?? 0,
+      temp: this.toNum(dto?.temp),
+      battery: this.toNum(dto?.battery),
+      rssi: this.toNum(dto?.rssi),
+      snr: this.toNum(dto?.snr),
+    };
+  }
+
   getHistory(
-  deviceEui: string,
-  opts?: { limit?: number; fromTs?: number; toTs?: number }
-): Observable<TelemetryHistoryResponse> {
-  const limit = opts?.limit ?? 300;
+    deviceEui: string,
+    opts?: { limit?: number; fromTs?: number; toTs?: number }
+  ): Observable<TelemetryHistoryResponse> {
+    let params = new HttpParams();
+    if (opts?.limit) params = params.set('limit', String(opts.limit));
+    if (opts?.fromTs) params = params.set('fromTs', String(opts.fromTs));
+    if (opts?.toTs) params = params.set('toTs', String(opts.toTs));
 
-  let params = new HttpParams().set('limit', String(limit));
-  if (opts?.fromTs != null) params = params.set('from', String(opts.fromTs));
-  if (opts?.toTs != null) params = params.set('to', String(opts.toTs));
-
-  return this.http.get<TelemetryHistoryResponse>(
-    `${this.base}/v1/telemetry/history/${encodeURIComponent(deviceEui)}/`,
-    { params }
-  );
-}
-
+    return this.http
+      .get<TelemetryHistoryResponse>(`${this.base}/v1/telemetry/history/${encodeURIComponent(deviceEui)}/`, { params })
+      .pipe(
+        map((res) => ({
+          ...res,
+          history: Array.isArray(res?.history) ? res.history.map((p: any) => this.normalizePoint(p)) : [],
+        }))
+      );
+  }
 
   getLatest(deviceEui: string): Observable<TelemetryLatestResponse> {
-    return this.http.get<TelemetryLatestResponse>(
-      `${this.base}/v1/telemetry/latest/${encodeURIComponent(deviceEui)}/`
-    );
+    return this.http
+      .get<any>(`${this.base}/v1/telemetry/latest/${encodeURIComponent(deviceEui)}/`)
+      .pipe(
+        map((dto) => ({
+          device_eui: String(dto?.device_eui ?? deviceEui),
+          ...this.normalizePoint(dto),
+        }))
+      );
+  }
+
+  ingest(payload: any): Observable<any> {
+    return this.http.post(`${this.base}/v1/telemetry/ingest/`, payload);
   }
 }

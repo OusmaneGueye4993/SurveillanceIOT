@@ -1,6 +1,4 @@
-<!-- =========================
-     HEADER (FLOTTE)
-========================= -->
+
 <div class="fleet-header">
   <div class="fleet-title">
     <h2>Dashboard</h2>
@@ -18,9 +16,6 @@
   </mat-form-field>
 </div>
 
-<!-- =========================
-     LISTE + MAP (UNE SEULE)
-========================= -->
 <ng-container *ngIf="(filtered$ | async) as devices">
   <mat-card class="fleet-list-card">
     <mat-card-title>Équipements ({{ devices.length }})</mat-card-title>
@@ -43,8 +38,9 @@
             <span class="eui">{{ d.device_eui }}</span>
 
             <span class="meta">
-              Bat: {{ fmt(d.last.battery, 0) }}% •
-              RSSI: {{ fmt(d.last.rssi, 0) }} •
+              Bat: {{ fmt(d.battery ?? d.last?.battery, 0) }}% •
+              RSSI: {{ fmt(d.rssi ?? d.last?.rssi, 0) }} •
+
               vu il y a {{ secondsAgo(d.lastSeenMs) }}
             </span>
           </button>

@@ -19,8 +19,9 @@ import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatButtonModule } from '@angular/material/button';
 
 import { FleetMapComponent } from '../../shared/fleet-map/fleet-map';
-import { TelemetryApiService, TelemetryPoint } from '../../core/api/telemetry-api.service';
-import { TelemetryStoreService, DeviceSummary } from '../../core/store/telemetry-store.service';
+import { TelemetryApiService } from '../../core/api/telemetry-api.service';
+import { TelemetryStoreService } from '../../core/store/telemetry-store.service';
+import { DeviceSummary, TelemetryPoint } from '../../core/models/telemetry.models';
 
 type WindowKey = '15m' | '1h' | '6h' | '24h';
 
@@ -39,7 +40,8 @@ type WindowKey = '15m' | '1h' | '6h' | '24h';
   ],
   templateUrl: './map.html',
   styleUrls: ['./map.scss'],
-})
+
+})                        
 export class MapComponent implements OnInit, OnDestroy {
   // ✅ IMPORTANT: ne pas initialiser avec this.store ici
   status$!: Observable<any>;
@@ -110,6 +112,14 @@ export class MapComponent implements OnInit, OnDestroy {
     this.windowKey$.next(this.windowKey$.value);
   }
 
+  secondsAgoTs(tsSec: number | null | undefined): string {
+  if (!tsSec) return '—';
+  const s = Math.max(0, Math.round(Date.now() / 1000 - tsSec));
+  return `${s}s`;
+}
+
+
+
   private loadHistory$(deviceEui: string, windowKey: WindowKey) {
     const nowSec = Math.floor(Date.now() / 1000);
     const fromSec = nowSec - this.windowSeconds(windowKey);
@@ -123,11 +133,11 @@ export class MapComponent implements OnInit, OnDestroy {
     return this.api.getHistory(deviceEui, { limit, fromTs: fromSec, toTs: nowSec }).pipe(
       tap({
         next: (res) => {
-          const cleaned = this.cleanHistory(res?.history ?? []);
+  const cleaned = this.cleanHistory(res?.history ?? []);
+  this.history = cleaned;
+  this.loadingHistory = false;
+},
 
-          this.history = cleaned;
-          this.loadingHistory = false;
-        },
         error: (err) => {
           this.loadingHistory = false;
           this.historyError = 'Erreur lors du chargement de l’historique';
