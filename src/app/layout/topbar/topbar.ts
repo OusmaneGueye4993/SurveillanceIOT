@@ -3,6 +3,8 @@ import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 
+import { AuthService } from '../../core/auth/auth.service';
+
 @Component({
   selector: 'app-topbar',
   standalone: true,
@@ -10,4 +12,10 @@ import { MatIconModule } from '@angular/material/icon';
   templateUrl: './topbar.html',
   styleUrl: './topbar.scss',
 })
-export class TopbarComponent {}
+export class TopbarComponent {
+  constructor(public auth: AuthService) {}
+
+  logout(): void {
+    this.auth.logout();
+  }
+}

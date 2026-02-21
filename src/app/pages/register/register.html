@@ -1,0 +1,65 @@
+<div class="authShell">
+  <div class="authCard">
+    <div class="authTop">
+      <div class="badge">
+        <div class="badgeInner">
+          <span class="badgeDot"></span>
+          <span class="badgeText">MauriOT</span>
+        </div>
+      </div>
+
+      <h1 class="title">Créer un compte</h1>
+      <p class="subtitle">Inscription rapide pour accéder au dashboard.</p>
+
+      <div class="sessionInfo" *ngIf="error">
+        <mat-icon class="sessionIcon">info</mat-icon>
+        <div class="sessionText">
+          <div class="sessionTitle">Information</div>
+          <div class="sessionMsg">{{ error }}</div>
+        </div>
+      </div>
+    </div>
+
+    <form class="authForm" [formGroup]="form" (ngSubmit)="submit()">
+      <mat-form-field appearance="outline" class="full">
+        <mat-label>Email</mat-label>
+        <mat-icon matPrefix class="prefixIcon">mail</mat-icon>
+        <input matInput formControlName="email" autocomplete="email" />
+        <mat-error *ngIf="form.get('email')?.touched && form.get('email')?.hasError('required')">
+          Champ obligatoire
+        </mat-error>
+        <mat-error *ngIf="form.get('email')?.touched && form.get('email')?.hasError('email')">
+          Email invalide
+        </mat-error>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="full">
+        <mat-label>Mot de passe</mat-label>
+        <mat-icon matPrefix class="prefixIcon">lock</mat-icon>
+        <input matInput [type]="hide ? 'password' : 'text'" formControlName="password" autocomplete="new-password" />
+        <button type="button" mat-icon-button matSuffix (click)="hide = !hide" aria-label="toggle password">
+          <mat-icon>{{ hide ? 'visibility' : 'visibility_off' }}</mat-icon>
+        </button>
+
+        <mat-error *ngIf="form.get('password')?.touched && form.get('password')?.hasError('required')">
+          Champ obligatoire
+        </mat-error>
+        <mat-error *ngIf="form.get('password')?.touched && form.get('password')?.hasError('strongPassword')">
+          Minimum 8 caractères, 1 majuscule, 1 minuscule et 1 chiffre
+        </mat-error>
+      </mat-form-field>
+
+      <button mat-raised-button class="primaryBtn" type="submit" [disabled]="loading">
+        {{ loading ? 'Création…' : 'Créer mon compte' }}
+      </button>
+
+      <div class="links">
+        <a class="link" routerLink="/login">Se connecter</a>
+      </div>
+    </form>
+  </div>
+
+  <div class="authFooter">
+    <span>© MauriOT — Plateforme de surveillance IoT</span>
+  </div>
+</div>
