@@ -40,10 +40,8 @@ type WindowKey = '15m' | '1h' | '6h' | '24h';
   ],
   templateUrl: './map.html',
   styleUrls: ['./map.scss'],
-
-})                        
+})
 export class MapComponent implements OnInit, OnDestroy {
-  // ✅ IMPORTANT: ne pas initialiser avec this.store ici
   status$!: Observable<any>;
   filtered$!: Observable<DeviceSummary[]>;
   selected$!: Observable<string | null>;
@@ -51,14 +49,11 @@ export class MapComponent implements OnInit, OnDestroy {
   showHistory = true;
   follow = true;
 
-  // ✅ Fenêtre de temps
   windowKey$ = new BehaviorSubject<WindowKey>('1h');
 
-  // UI display
   loadingHistory = false;
   historyError: string | null = null;
 
-  // Pour la carte
   history: TelemetryPoint[] = [];
 
   private sub = new Subscription();
@@ -67,7 +62,6 @@ export class MapComponent implements OnInit, OnDestroy {
     private api: TelemetryApiService,
     private store: TelemetryStoreService
   ) {
-    // ✅ INITIALISATION ICI (store déjà disponible)
     this.status$ = this.store.status$;
     this.filtered$ = this.store.filtered$;
     this.selected$ = this.store.selected$;
@@ -76,9 +70,7 @@ export class MapComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.store.connectMqtt();
 
-    // ✅ Charger l'historique automatiquement quand:
-    // - device sélectionné change
-    // - fenêtre de temps change
+    // ✅ charge l’historique à chaque changement (selected + window)
     this.sub.add(
       combineLatest([this.selected$, this.windowKey$]).pipe(
         distinctUntilChanged((a, b) => a[0] === b[0] && a[1] === b[1]),
@@ -87,7 +79,7 @@ export class MapComponent implements OnInit, OnDestroy {
             this.history = [];
             this.loadingHistory = false;
             this.historyError = null;
-            return EMPTY; // ✅ pas [] (sinon erreur de type)
+            return EMPTY;
           }
           return this.loadHistory$(eui, windowKey);
         })
@@ -101,6 +93,7 @@ export class MapComponent implements OnInit, OnDestroy {
 
   onSelect(eui: string) {
     this.store.select(eui);
+    this.follow = true; // ✅ toujours suivre après sélection
   }
 
   setWindow(key: WindowKey) {
@@ -108,51 +101,53 @@ export class MapComponent implements OnInit, OnDestroy {
   }
 
   refresh() {
-    // force reload : on ré-émet la même windowKey pour déclencher combineLatest
+    // force reload
     this.windowKey$.next(this.windowKey$.value);
   }
 
+  clearHistory() {
+    this.history = [];
+    this.historyError = null;
+    this.loadingHistory = false;
+  }
+
   secondsAgoTs(tsSec: number | null | undefined): string {
-  if (!tsSec) return '—';
-  const s = Math.max(0, Math.round(Date.now() / 1000 - tsSec));
-  return `${s}s`;
-}
-
-
+    if (!tsSec) return '—';
+    const s = Math.max(0, Math.round(Date.now() / 1000 - tsSec));
+    return `${s}s`;
+  }
 
   private loadHistory$(deviceEui: string, windowKey: WindowKey) {
     const nowSec = Math.floor(Date.now() / 1000);
     const fromSec = nowSec - this.windowSeconds(windowKey);
-
-    // ✅ limit “pro” : plus la fenêtre est grande, plus on augmente
     const limit = this.suggestLimit(windowKey);
 
     this.loadingHistory = true;
     this.historyError = null;
 
-    return this.api.getHistory(deviceEui, { limit, fromTs: fromSec, toTs: nowSec }).pipe(
-      tap({
-        next: (res) => {
-  const cleaned = this.cleanHistory(res?.history ?? []);
-  this.history = cleaned;
-  this.loadingHistory = false;
-},
-
-        error: (err) => {
-          this.loadingHistory = false;
-          this.historyError = 'Erreur lors du chargement de l’historique';
-          this.history = [];
-          console.error(err);
-        },
-      })
-    );
+    return this.api
+      .getHistory(deviceEui, { limit, fromTs: fromSec, toTs: nowSec })
+      .pipe(
+        tap({
+          next: (res) => {
+            this.history = this.cleanHistory(res?.history ?? []);
+            this.loadingHistory = false;
+          },
+          error: (err) => {
+            console.error(err);
+            this.loadingHistory = false;
+            this.historyError = 'Erreur lors du chargement de l’historique';
+            this.history = [];
+          },
+        })
+      );
   }
 
   private windowSeconds(k: WindowKey): number {
     switch (k) {
       case '15m': return 15 * 60;
-      case '1h':  return 60 * 60;
-      case '6h':  return 6 * 60 * 60;
+      case '1h': return 60 * 60;
+      case '6h': return 6 * 60 * 60;
       case '24h': return 24 * 60 * 60;
     }
   }
@@ -160,49 +155,52 @@ export class MapComponent implements OnInit, OnDestroy {
   private suggestLimit(k: WindowKey): number {
     switch (k) {
       case '15m': return 300;
-      case '1h':  return 800;
-      case '6h':  return 2000;
+      case '1h': return 800;
+      case '6h': return 2000;
       case '24h': return 5000;
     }
   }
 
-
+  // ✅ tri + filtre + dedupe => polyline propre
   private cleanHistory(list: TelemetryPoint[]): TelemetryPoint[] {
-  const pts = (list ?? [])
-    .map(p => ({
-      ...p,
-      ts: Number((p as any).ts),
-      lat: Number((p as any).lat),
-      lng: Number((p as any).lng),
-    }))
-    .filter(p =>
-      Number.isFinite(p.ts) &&
-      Number.isFinite(p.lat) &&
-      Number.isFinite(p.lng)
-    );
+    const pts = (list ?? [])
+      .map((p) => ({
+        ...p,
+        ts: Number((p as any).ts),
+        lat: Number((p as any).lat),
+        lng: Number((p as any).lng),
+      }))
+      .filter(
+        (p) =>
+          Number.isFinite(p.ts) &&
+          Number.isFinite(p.lat) &&
+          Number.isFinite(p.lng)
+      );
 
-  pts.sort((a, b) => a.ts - b.ts);
+    // polyline: ASC chronologique
+    pts.sort((a, b) => a.ts - b.ts);
 
-  // dedupe lat/lng consécutifs
-  const eps = 1e-7;
-  const out: TelemetryPoint[] = [];
-  for (const p of pts) {
-    const prev = out[out.length - 1];
-    if (prev && Math.abs(prev.lat - p.lat) < eps && Math.abs(prev.lng - p.lng) < eps) continue;
-    out.push(p);
+    // dedupe lat/lng consécutifs
+    const eps = 1e-7;
+    const out: TelemetryPoint[] = [];
+    for (const p of pts) {
+      const prev = out[out.length - 1];
+      if (
+        prev &&
+        Math.abs(prev.lat - p.lat) < eps &&
+        Math.abs(prev.lng - p.lng) < eps
+      ) {
+        continue;
+      }
+      out.push(p);
+    }
+
+    // option perf: limiter les points affichés
+    return out.length > 1500 ? out.slice(out.length - 1500) : out;
   }
-  return out;
-}
-
-
 
   trackByEui(_: number, d: DeviceSummary) {
     return d.device_eui;
-  }
-
-  secondsAgo(ms: number): string {
-    const s = Math.max(0, Math.round((Date.now() - ms) / 1000));
-    return `${s}s`;
   }
 
   fmt(v: any, digits = 0): string {
@@ -212,5 +210,3 @@ export class MapComponent implements OnInit, OnDestroy {
     return n.toFixed(digits);
   }
 }
-
-

@@ -20,22 +20,6 @@ export interface HistoryPoint {
   lng: number;
 }
 
-export interface DeviceLast {
-  ts?: number;           // ✅ optionnel
-  lat?: number | null;   // ✅ optionnel
-  lng?: number | null;   // ✅ optionnel
-  battery?: number;
-  rssi?: number;
-  temp?: number;
-}
-
-export interface DeviceSummary {
-  device_eui: string;
-  active: boolean;
-  last: DeviceLast;
-  lastSeenMs?: number;
-}
-
 @Component({
   selector: 'app-fleet-map',
   standalone: true,
@@ -45,8 +29,8 @@ export interface DeviceSummary {
 })
 export class FleetMapComponent implements AfterViewInit, OnChanges, OnDestroy {
   @ViewChild('mapEl', { static: true }) mapEl!: ElementRef<HTMLDivElement>;
-  @Input() devices: any[] = []; 
- // @Input() devices: DeviceSummary[] = [];
+
+  @Input() devices: any[] = [];
   @Input() selected: string | null = null;
 
   @Input() history: HistoryPoint[] | null = null;
@@ -109,6 +93,8 @@ export class FleetMapComponent implements AfterViewInit, OnChanges, OnDestroy {
   private renderAll(): void {
     this.updateMarkers();
     this.updateHistoryTrack();
+
+    // ✅ follow toujours sur selected
     if (this.follow && this.selected) this.flyToSelected();
   }
 

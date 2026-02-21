@@ -166,7 +166,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   onSelect(eui: string) {
+    // ✅ sélection depuis la liste OU marker
     this.fleet.select(eui);
+    // Le follow est forcé à true dans dashboard.html => la carte recentre automatiquement
   }
 
   trackByEui(_: number, d: DeviceSummary) {
@@ -180,26 +182,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
     return n.toFixed(digits);
   }
 
-
   secondsAgo(ms: number | null | undefined): string {
-  if (!ms) return '—';
-  const s = Math.max(0, Math.round((Date.now() - ms) / 1000));
-  return `${s}s`;
-}
-
-
-
-  // ✅ adapte au FleetMap qui attend {device_eui, active, last:{lat,lng}}
-  mapDevices(devices: DeviceSummary[]) {
-    return devices
-      .filter((d) => (d.lat != null && d.lng != null) || (d.last?.lat != null && d.last?.lng != null))
-      .map((d) => ({
-        device_eui: d.device_eui,
-        active: d.active,
-        last: {
-          lat: d.lat ?? d.last?.lat ?? null,
-          lng: d.lng ?? d.last?.lng ?? null,
-        },
-      }));
+    if (!ms) return '—';
+    const s = Math.max(0, Math.round((Date.now() - ms) / 1000));
+    return `${s}s`;
   }
 }
+                                                                                                                                                                            

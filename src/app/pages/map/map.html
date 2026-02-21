@@ -3,14 +3,17 @@
   <div class="top">
     <div class="titleBlock">
       <h2>Carte GPS</h2>
+
       <div class="sub">
         Historique & flotte
         <span class="sep">•</span>
-        Statut MQTT: <b>{{ status$ | async }}</b>
+        Statut MQTT:
+        <b>{{ (status$ | async) ?? '—' }}</b>
       </div>
     </div>
 
     <div class="topActions">
+      <!-- Fenêtre historique -->
       <mat-button-toggle-group
         [value]="(windowKey$ | async) ?? '1h'"
         (change)="setWindow($event.value)"
@@ -23,12 +26,36 @@
         <mat-button-toggle value="24h">24 h</mat-button-toggle>
       </mat-button-toggle-group>
 
+      <!-- Actions -->
       <button mat-stroked-button (click)="refresh()">
         Rafraîchir
       </button>
 
-      <mat-slide-toggle [checked]="showHistory" (change)="showHistory = $event.checked">
-        Historique
+      <button
+        mat-stroked-button
+        (click)="follow = true; refresh()"
+        [disabled]="!(selected$ | async)"
+        aria-label="Centrer sur l’équipement sélectionné"
+      >
+        Centrer
+      </button>
+
+      <button
+        mat-stroked-button
+        (click)="clearHistory()"
+        [disabled]="!history || history.length === 0"
+        aria-label="Effacer la trajectoire affichée"
+      >
+        Effacer trajet
+      </button>
+
+      <!-- Toggle affichage -->
+      <mat-slide-toggle
+        [checked]="showHistory"
+        (change)="showHistory = $event.checked"
+        aria-label="Afficher la trajectoire"
+      >
+        Trajectoire
       </mat-slide-toggle>
     </div>
   </div>
@@ -38,18 +65,23 @@
     <mat-card-title>Carte</mat-card-title>
 
     <mat-card-content class="mapWrap">
-      <ng-container *ngIf="(filtered$ | async) as devices">
-        <app-fleet-map
-          class="map"
-          [devices]="devices"
-          [selected]="(selected$ | async) ?? null"
-          [history]="history ?? null"
-          [follow]="follow"
-          [showHistory]="showHistory"
-          (selectDevice)="onSelect($event)">
-        </app-fleet-map>
+      <!-- Map + devices -->
+      <ng-container *ngIf="(filtered$ | async) as devices; else loadingDevices">
+        <ng-container *ngIf="devices.length > 0; else emptyDevices">
+          <app-fleet-map
+            class="map"
+            [devices]="devices"
+            [selected]="(selected$ | async) ?? null"
+            [history]="history ?? null"
+            [follow]="follow"
+            [showHistory]="showHistory"
+            (selectDevice)="onSelect($event)"
+          >
+          </app-fleet-map>
+        </ng-container>
       </ng-container>
 
+      <!-- Footer -->
       <div class="mapFooter">
         <div class="legend">
           <span><span class="lgDot ok"></span> Actif</span>
@@ -59,10 +91,33 @@
 
         <div class="histState">
           <span class="pill" *ngIf="loadingHistory">Chargement…</span>
-          <span class="pill off" *ngIf="historyError">{{ historyError }}</span>
-          <span class="pill" *ngIf="!loadingHistory && !historyError">Points: <b>{{ history.length || 0 }}</b></span>
+
+          <span class="pill off" *ngIf="!loadingHistory && historyError">
+            {{ historyError }}
+          </span>
+
+          <span class="pill" *ngIf="!loadingHistory && !historyError">
+            Points:
+            <b>{{ history?.length ?? 0 }}</b>
+          </span>
+
+          <span
+            class="pill warn"
+            *ngIf="!loadingHistory && !historyError && (history?.length ?? 0) === 0 && (selected$ | async)"
+          >
+            Aucun point dans cette fenêtre
+          </span>
         </div>
       </div>
+
+      <!-- Templates -->
+      <ng-template #loadingDevices>
+        <div class="empty">Chargement des équipements…</div>
+      </ng-template>
+
+      <ng-template #emptyDevices>
+        <div class="empty">Aucun équipement reçu.</div>
+      </ng-template>
     </mat-card-content>
   </mat-card>
 
@@ -82,18 +137,19 @@
               class="equip-item"
               *ngFor="let d of devices; trackBy: trackByEui"
               (click)="onSelect(d.device_eui)"
-              [class.selected]="d.device_eui === selected">
-
+              [class.selected]="d.device_eui === selected"
+              role="button"
+              tabindex="0"
+            >
               <span class="dot" [class.active]="d.active" [class.inactive]="!d.active"></span>
 
               <div class="main">
                 <div class="eui">{{ d.device_eui }}</div>
+
                 <div class="meta">
-                 Bat: {{ fmt(d.battery, 0) }}% •
-RSSI: {{ fmt(d.rssi, 0) }} •
-vu il y a {{ secondsAgoTs(d.lastTs) }}
-
-
+                  Bat: {{ fmt(d.battery, 0) }}% •
+                  RSSI: {{ fmt(d.rssi, 0) }} •
+                  vu il y a {{ secondsAgoTs(d.lastTs) }}
                 </div>
               </div>
 

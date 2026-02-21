@@ -20,7 +20,6 @@ export class TelemetryApiService {
 
   constructor(private http: HttpClient) {}
 
-  // --- helpers ---
   private toNum(v: any): number | null {
     const n = Number(v);
     return Number.isFinite(n) ? n : null;
@@ -51,11 +50,16 @@ export class TelemetryApiService {
     if (opts?.toTs) params = params.set('toTs', String(opts.toTs));
 
     return this.http
-      .get<TelemetryHistoryResponse>(`${this.base}/v1/telemetry/history/${encodeURIComponent(deviceEui)}/`, { params })
+      .get<TelemetryHistoryResponse>(
+        `${this.base}/v1/telemetry/history/${encodeURIComponent(deviceEui)}/`,
+        { params }
+      )
       .pipe(
         map((res) => ({
           ...res,
-          history: Array.isArray(res?.history) ? res.history.map((p: any) => this.normalizePoint(p)) : [],
+          history: Array.isArray(res?.history)
+            ? res.history.map((p: any) => this.normalizePoint(p))
+            : [],
         }))
       );
   }

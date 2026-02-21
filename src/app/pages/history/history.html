@@ -1,1 +1,73 @@
-<p>history works!</p>
+<div class="page">
+  <div class="top">
+    <div class="titleBlock">
+      <h2>Historique</h2>
+      <div class="sub">
+        Points télémétrie (fenêtre + table)
+      </div>
+    </div>
+
+    <div class="topActions">
+      <mat-button-toggle-group
+        [value]="(windowKey$ | async) ?? '1h'"
+        (change)="setWindow($event.value)"
+        class="winGroup"
+      >
+        <mat-button-toggle value="15m">15 min</mat-button-toggle>
+        <mat-button-toggle value="1h">1 h</mat-button-toggle>
+        <mat-button-toggle value="6h">6 h</mat-button-toggle>
+        <mat-button-toggle value="24h">24 h</mat-button-toggle>
+      </mat-button-toggle-group>
+
+      <button mat-stroked-button (click)="refresh()">Rafraîchir</button>
+    </div>
+  </div>
+
+  <mat-card class="panel">
+    <mat-card-title>Table des points</mat-card-title>
+
+    <mat-card-content>
+      <div class="state" *ngIf="loading">Chargement…</div>
+      <div class="state error" *ngIf="!loading && error">{{ error }}</div>
+      <div class="state empty" *ngIf="!loading && !error && history.length === 0">
+        Aucun point dans cette fenêtre.
+      </div>
+
+      <table mat-table [dataSource]="history" class="table" *ngIf="!loading && !error && history.length > 0">
+
+        <ng-container matColumnDef="time">
+          <th mat-header-cell *matHeaderCellDef>Date</th>
+          <td mat-cell *matCellDef="let p">{{ fmtTime(p.ts) }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="temp">
+          <th mat-header-cell *matHeaderCellDef>Temp (°C)</th>
+          <td mat-cell *matCellDef="let p">{{ fmt(p.temp, 1) }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="battery">
+          <th mat-header-cell *matHeaderCellDef>Bat (%)</th>
+          <td mat-cell *matCellDef="let p">{{ fmt(p.battery, 0) }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="rssi">
+          <th mat-header-cell *matHeaderCellDef>RSSI</th>
+          <td mat-cell *matCellDef="let p">{{ fmt(p.rssi, 0) }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="snr">
+          <th mat-header-cell *matHeaderCellDef>SNR</th>
+          <td mat-cell *matCellDef="let p">{{ fmt(p.snr, 1) }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="latlng">
+          <th mat-header-cell *matHeaderCellDef>Position</th>
+          <td mat-cell *matCellDef="let p">{{ fmt(p.lat, 5) }}, {{ fmt(p.lng, 5) }}</td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+        <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+      </table>
+    </mat-card-content>
+  </mat-card>
+</div>

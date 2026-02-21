@@ -1,0 +1,7 @@
+.page { display: grid; gap: 16px; }
+.top { display:flex; align-items:center; justify-content:space-between; gap:16px; }
+.topActions { display:flex; align-items:center; gap:12px; }
+.state { padding: 12px; color: #555; }
+.state.error { color: #b00020; }
+.state.empty { color: #666; }
+.table { width: 100%; }
