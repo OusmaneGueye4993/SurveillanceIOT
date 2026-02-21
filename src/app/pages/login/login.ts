@@ -43,7 +43,6 @@ export class LoginComponent {
 
   submit(): void {
     this.error = null;
-
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       return;
@@ -52,15 +51,14 @@ export class LoginComponent {
     const { email, password } = this.form.value as { email: string; password: string };
 
     this.loading = true;
-
-    this.auth.login(email.trim(), password).subscribe({
+    this.auth.login(email, password).subscribe({
       next: () => {
         this.loading = false;
         this.router.navigateByUrl('/dashboard');
       },
       error: (e) => {
         this.loading = false;
-        this.error = e?.error?.detail || 'Connexion impossible.';
+        this.error = e?.error?.detail || 'Connexion impossible (email/mot de passe incorrect).';
       },
     });
   }

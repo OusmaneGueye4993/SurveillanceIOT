@@ -1,29 +1,16 @@
-<div class="authShell">
-  <div class="authCard">
-    <div class="authTop">
-      <div class="badge">
-        <div class="badgeInner">
-          <span class="badgeDot"></span>
-          <span class="badgeText">MauriOT</span>
-        </div>
-      </div>
-
-      <h1 class="title">Connexion</h1>
-      <p class="subtitle">Entrez votre email et votre mot de passe.</p>
-
-      <div class="sessionInfo" *ngIf="error">
-        <mat-icon class="sessionIcon">info</mat-icon>
-        <div class="sessionText">
-          <div class="sessionTitle">Information</div>
-          <div class="sessionMsg">{{ error }}</div>
-        </div>
+<div class="loginPage">
+  <mat-card class="loginCard">
+    <div class="brand">
+      <div class="logo">IoT</div>
+      <div>
+        <div class="title">Connexion</div>
+        <div class="sub">Accède à ton dashboard de surveillance</div>
       </div>
     </div>
 
-    <form class="authForm" [formGroup]="form" (ngSubmit)="submit()">
+    <form [formGroup]="form" (ngSubmit)="submit()">
       <mat-form-field appearance="outline" class="full">
         <mat-label>Email</mat-label>
-        <mat-icon matPrefix class="prefixIcon">person</mat-icon>
         <input matInput formControlName="email" autocomplete="email" />
         <mat-error *ngIf="form.get('email')?.touched && form.get('email')?.hasError('required')">
           Champ obligatoire
@@ -35,34 +22,32 @@
 
       <mat-form-field appearance="outline" class="full">
         <mat-label>Mot de passe</mat-label>
-        <mat-icon matPrefix class="prefixIcon">lock</mat-icon>
         <input
           matInput
           [type]="hide ? 'password' : 'text'"
           formControlName="password"
           autocomplete="current-password"
         />
-        <button type="button" mat-icon-button matSuffix (click)="hide = !hide" aria-label="toggle password">
+        <button type="button" mat-icon-button matSuffix (click)="hide = !hide">
           <mat-icon>{{ hide ? 'visibility' : 'visibility_off' }}</mat-icon>
         </button>
+
         <mat-error *ngIf="form.get('password')?.touched && form.get('password')?.invalid">
           Champ obligatoire
         </mat-error>
       </mat-form-field>
 
-      <button mat-raised-button class="primaryBtn" type="submit" [disabled]="loading">
+      <div class="error" *ngIf="error">{{ error }}</div>
+
+      <button mat-raised-button class="btn" type="submit" [disabled]="loading">
         {{ loading ? 'Connexion…' : 'Se connecter' }}
       </button>
-
-      <div class="links">
-        <a class="link" routerLink="/register">Créer un compte</a>
-        <span class="dot">•</span>
-        <a class="link subtle" routerLink="/forgot-password">Mot de passe oublié ?</a>
-      </div>
     </form>
-  </div>
 
-  <div class="authFooter">
-    <span>© MauriOT — Plateforme de surveillance IoT</span>
-  </div>
+    <div class="hint">
+      Pas de compte ? <a routerLink="/register"><b>Créer un compte</b></a>
+    </div>
+
+    <div class="hint">Backend: <b>/api/v1/auth/login/</b></div>
+  </mat-card>
 </div>

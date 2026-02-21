@@ -32,6 +32,9 @@ export const routes: Routes = [
       { path: 'alerts', component: AlertsComponent },
       { path: 'history', component: HistoryComponent },
       { path: 'settings', component: SettingsComponent },
+      {path: 'devices',
+  loadComponent: () => import('../app/core/devices/devices').then(m => m.DevicesComponent),}
+
     ],
   },
 

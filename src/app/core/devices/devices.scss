@@ -1,0 +1,92 @@
+.page {
+  padding: 16px;
+  display: grid;
+  gap: 14px;
+}
+
+.header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+
+  h2 {
+    margin: 0;
+    font-size: 1.35rem;
+    font-weight: 800;
+  }
+
+  p {
+    margin: 6px 0 0;
+    opacity: 0.75;
+  }
+}
+
+.actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.card {
+  overflow: hidden;
+  border-radius: 14px;
+}
+
+.tableWrap {
+  padding: 10px 6px 6px;
+}
+
+.eui {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  padding: 4px 8px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.nameCell { display: grid; gap: 4px; }
+.nameMain { font-weight: 800; }
+.nameSub { opacity: 0.7; font-size: 0.88rem; }
+
+.actionCell {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.empty {
+  padding: 28px 16px;
+  display: grid;
+  justify-items: center;
+  text-align: center;
+  gap: 10px;
+}
+
+.emptyIcon { font-size: 44px; width: 44px; height: 44px; opacity: 0.75; }
+.emptyTitle { font-weight: 900; font-size: 1.1rem; }
+.emptyMsg { opacity: 0.75; max-width: 420px; }
+
+.error {
+  display: grid;
+  grid-template-columns: 22px 1fr;
+  gap: 10px;
+  padding: 12px;
+  margin: 12px;
+  border-radius: 12px;
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.22);
+}
+
+.errorTitle { font-weight: 900; }
+.errorMsg { opacity: 0.85; margin-top: 2px; }
+
+:host ::ng-deep .chipActive {
+  background: rgba(34, 197, 94, 0.18) !important;
+}
+:host ::ng-deep .chipIdle {
+  background: rgba(100, 116, 139, 0.18) !important;
+}
+:host ::ng-deep .chipIcon {
+  margin-right: 6px;
+}

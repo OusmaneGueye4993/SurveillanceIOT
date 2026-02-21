@@ -10,7 +10,6 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 
 import { AuthService } from '../../core/auth/auth.service';
-import { strongPasswordValidator } from '../../core/auth/password.validator';
 
 @Component({
   selector: 'app-register',
@@ -38,13 +37,12 @@ export class RegisterComponent {
   constructor(private fb: FormBuilder, private auth: AuthService, private router: Router) {
     this.form = this.fb.group({
       email: ['', [Validators.required, Validators.email]],
-      password: ['', [Validators.required, strongPasswordValidator]],
+      password: ['', [Validators.required, Validators.minLength(8)]],
     });
   }
 
   submit(): void {
     this.error = null;
-
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       return;
@@ -53,8 +51,7 @@ export class RegisterComponent {
     const { email, password } = this.form.value as { email: string; password: string };
 
     this.loading = true;
-
-    this.auth.registerAndLogin(email.trim(), password).subscribe({
+    this.auth.registerAndLogin(email, password).subscribe({
       next: () => {
         this.loading = false;
         this.router.navigateByUrl('/dashboard');
@@ -63,9 +60,9 @@ export class RegisterComponent {
         this.loading = false;
         const msg =
           e?.error?.detail ||
-          e?.error?.email?.[0] ||
-          e?.error?.password?.[0] ||
           e?.error?.username?.[0] ||
+          e?.error?.password?.[0] ||
+          e?.error?.email?.[0] ||
           'Création de compte impossible.';
         this.error = msg;
       },

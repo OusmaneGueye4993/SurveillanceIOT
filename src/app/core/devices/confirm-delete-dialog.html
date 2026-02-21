@@ -1,0 +1,13 @@
+<h2 mat-dialog-title>
+  <mat-icon class="warn">warning</mat-icon>
+  {{ data.title }}
+</h2>
+
+<div mat-dialog-content class="content">
+  <p>{{ data.message }}</p>
+</div>
+
+<div mat-dialog-actions align="end">
+  <button mat-button (click)="cancel()">Annuler</button>
+  <button mat-raised-button color="warn" (click)="confirm()">Supprimer</button>
+</div>

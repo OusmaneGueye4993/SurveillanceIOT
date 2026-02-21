@@ -1,0 +1,101 @@
+<div class="page">
+  <div class="header">
+    <div>
+      <h2>Appareils</h2>
+      <p>Gère tes devices : ajout, suppression, définition de l’appareil actif.</p>
+    </div>
+
+    <div class="actions">
+      <button mat-stroked-button (click)="refresh()">
+        <mat-icon>refresh</mat-icon>
+        Rafraîchir
+      </button>
+      <button mat-raised-button color="primary" (click)="openAdd()">
+        <mat-icon>add</mat-icon>
+        Ajouter un appareil
+      </button>
+    </div>
+  </div>
+
+  <mat-card class="card">
+    <mat-progress-bar *ngIf="(loading$ | async)" mode="indeterminate"></mat-progress-bar>
+
+    <div class="error" *ngIf="(error$ | async) as err">
+      <mat-icon>error_outline</mat-icon>
+      <div>
+        <div class="errorTitle">Erreur</div>
+        <div class="errorMsg">{{ err }}</div>
+      </div>
+    </div>
+
+    <ng-container *ngIf="(devices$ | async) as devices">
+      <div class="empty" *ngIf="devices.length === 0 && !(loading$ | async)">
+        <mat-icon class="emptyIcon">devices_other</mat-icon>
+        <div class="emptyTitle">Aucun appareil enregistré</div>
+        <div class="emptyMsg">Ajoute un device pour commencer à visualiser la télémétrie.</div>
+        <button mat-raised-button color="primary" (click)="openAdd()">
+          <mat-icon>add</mat-icon>
+          Ajouter un appareil
+        </button>
+      </div>
+
+      <div class="tableWrap" *ngIf="devices.length > 0">
+        <table mat-table [dataSource]="devices" class="mat-elevation-z0">
+          <!-- Name -->
+          <ng-container matColumnDef="name">
+            <th mat-header-cell *matHeaderCellDef>Nom</th>
+            <td mat-cell *matCellDef="let d">
+              <div class="nameCell">
+                <div class="nameMain">{{ d.name || 'Sans nom' }}</div>
+                <div class="nameSub" *ngIf="d.description">{{ d.description }}</div>
+              </div>
+            </td>
+          </ng-container>
+
+          <!-- EUI -->
+          <ng-container matColumnDef="device_eui">
+            <th mat-header-cell *matHeaderCellDef>Device EUI</th>
+            <td mat-cell *matCellDef="let d">
+              <code class="eui">{{ d.device_eui }}</code>
+            </td>
+          </ng-container>
+
+          <!-- Status -->
+          <ng-container matColumnDef="status">
+            <th mat-header-cell *matHeaderCellDef>Statut</th>
+            <td mat-cell *matCellDef="let d">
+              <mat-chip-set>
+                <mat-chip *ngIf="d.is_active" class="chipActive" selected>
+                  <mat-icon class="chipIcon">check_circle</mat-icon>
+                  Actif
+                </mat-chip>
+                <mat-chip *ngIf="!d.is_active" class="chipIdle">
+                  Inactif
+                </mat-chip>
+              </mat-chip-set>
+            </td>
+          </ng-container>
+
+          <!-- Actions -->
+          <ng-container matColumnDef="actions">
+            <th mat-header-cell *matHeaderCellDef>Actions</th>
+            <td mat-cell *matCellDef="let d" class="actionCell">
+              <button mat-stroked-button (click)="setActive(d)" [disabled]="d.is_active">
+                <mat-icon>star</mat-icon>
+                Définir actif
+              </button>
+
+              <button mat-stroked-button color="warn" (click)="confirmDelete(d)">
+                <mat-icon>delete</mat-icon>
+                Supprimer
+              </button>
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+        </table>
+      </div>
+    </ng-container>
+  </mat-card>
+</div>
