@@ -10,11 +10,14 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
-
+import { MatSelectModule } from '@angular/material/select';
+import { MatOptionModule } from '@angular/material/core';
+import { MatDividerModule } from '@angular/material/divider';
+import { MatListModule } from '@angular/material/list';
 import { TelemetryStoreService } from '../../core/store/telemetry-store.service';
 import { DeviceSummary } from '../../core/models/telemetry.models';
 import { DashboardSettingsService } from '../../core/settings/dashboard-settings.service';
-
+import { MatTableModule } from '@angular/material/table';
 import { FleetMapComponent } from '../../shared/fleet-map/fleet-map';
 import { MiniMapComponent } from '../../shared/mini-map/mini-map';
 import { TelemetryChartComponent } from '../telemetry/telemetry';
@@ -37,6 +40,11 @@ type AlertItem = { level: 'critical' | 'warn'; message: string };
     FleetMapComponent,
     MiniMapComponent,
     TelemetryChartComponent,
+    MatSelectModule,
+    MatOptionModule,
+    MatDividerModule,
+    MatListModule,
+    MatTableModule,
   ],
   templateUrl: './dashboard.html',
   styleUrls: ['./dashboard.scss'],
@@ -69,26 +77,24 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
     this.cfg$ = this.settings.config$;
 
-    // ✅ Backend-first: polling REST (devices + latest)
+    // ✅ Backend-first
     this.fleet.startFleetPolling(5000);
 
-    // Recherche (filtre liste)
     this.sub.add(
       this.searchCtrl.valueChanges
         .pipe(startWith(this.searchCtrl.value), debounceTime(150))
         .subscribe((v) => this.fleet.setSearch(v))
     );
 
-    // telemetry$ = snapshot du device sélectionné (format chart-friendly)
     this.telemetry$ = combineLatest([this.selected$, this.devices$]).pipe(
       map(([eui, devices]) => {
         if (!eui) return null;
         const d = devices.find((x) => x.device_eui === eui);
         if (!d) return null;
 
-        const ts = d.lastTs ?? (d.last?.ts ?? null);
-        const lat = d.lat ?? (d.last?.lat ?? null);
-        const lng = d.lng ?? (d.last?.lng ?? null);
+        const ts = d.lastTs ?? d.last?.ts ?? null;
+        const lat = d.last?.lat ?? d.lat ?? null;
+        const lng = d.last?.lng ?? d.lng ?? null;
 
         if (ts == null || lat == null || lng == null) return null;
 
@@ -104,14 +110,12 @@ export class DashboardComponent implements OnInit, OnDestroy {
       })
     );
 
-    // reset history quand on change de device
     this.sub.add(
       this.selected$.subscribe(() => {
         this.history = [];
       })
     );
 
-    // construire history pour chart (accumulation) — basé sur les snapshots REST
     this.sub.add(
       this.telemetry$.subscribe((t) => {
         if (!t) return;
@@ -131,7 +135,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
       })
     );
 
-    // alerts (seuils depuis cfg)
     this.alerts$ = combineLatest([this.telemetry$, this.cfg$]).pipe(
       map(([t, cfg]) => {
         const out: AlertItem[] = [];
@@ -143,26 +146,17 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
         const bat = Number(t.battery);
         if (Number.isFinite(bat) && Number.isFinite(batLow) && bat < batLow) {
-          out.push({
-            level: 'critical',
-            message: `Batterie faible: ${Math.round(bat)}%`,
-          });
+          out.push({ level: 'critical', message: `Batterie faible: ${Math.round(bat)}%` });
         }
 
         const rssi = Number(t.rssi);
         if (Number.isFinite(rssi) && Number.isFinite(rssiLow) && rssi < rssiLow) {
-          out.push({
-            level: 'warn',
-            message: `Signal faible (RSSI): ${Math.round(rssi)} dBm`,
-          });
+          out.push({ level: 'warn', message: `Signal faible (RSSI): ${Math.round(rssi)} dBm` });
         }
 
         const temp = Number(t.temp);
         if (Number.isFinite(temp) && Number.isFinite(tempHigh) && temp > tempHigh) {
-          out.push({
-            level: 'warn',
-            message: `Température élevée: ${Math.round(temp)}°C`,
-          });
+          out.push({ level: 'warn', message: `Température élevée: ${Math.round(temp)}°C` });
         }
 
         return out;
@@ -172,7 +166,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.sub.unsubscribe();
-    // stop ref-counted polling
     this.fleet.stopFleetPolling();
   }
 
@@ -184,19 +177,28 @@ export class DashboardComponent implements OnInit, OnDestroy {
     return d.device_eui;
   }
 
-
+  // ✅ helpers utilisés dans dashboard.html
   fmt(v: any, digits = 0): string {
     const n = Number(v);
     if (!Number.isFinite(n)) return '—';
-    if (Number.isInteger(n)) return String(n);
     return n.toFixed(digits);
   }
 
-  secondsAgo(ms: number | null | undefined): string {
-    if (!ms) return '—';
-    const s = Math.max(0, Math.round((Date.now() - ms) / 1000));
-    return `${s}s`;
+  secondsAgo(lastSeenMs?: number | null): string {
+    if (!lastSeenMs) return '—';
+    const deltaMs = Date.now() - lastSeenMs;
+    if (deltaMs <= 0) return '0s';
+
+    const s = Math.floor(deltaMs / 1000);
+    if (s < 60) return `${s}s`;
+
+    const m = Math.floor(s / 60);
+    if (m < 60) return `${m}min`;
+
+    const h = Math.floor(m / 60);
+    if (h < 24) return `${h}h`;
+
+    const d = Math.floor(h / 24);
+    return `${d}j`;
   }
-
-
 }

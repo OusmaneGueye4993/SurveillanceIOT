@@ -68,10 +68,8 @@ export class MapComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    // ✅ Backend-first: polling REST (devices + latest)
     this.store.startFleetPolling(5000);
 
-    // ✅ charge l’historique à chaque changement (selected + window)
     this.sub.add(
       combineLatest([this.selected$, this.windowKey$]).pipe(
         distinctUntilChanged((a, b) => a[0] === b[0] && a[1] === b[1]),
@@ -95,7 +93,7 @@ export class MapComponent implements OnInit, OnDestroy {
 
   onSelect(eui: string) {
     this.store.select(eui);
-    this.follow = true; // ✅ toujours suivre après sélection
+    this.follow = true;
   }
 
   setWindow(key: WindowKey) {
@@ -103,7 +101,6 @@ export class MapComponent implements OnInit, OnDestroy {
   }
 
   refresh() {
-    // refresh markers + reload history
     this.store.refreshFleetOnce();
     this.windowKey$.next(this.windowKey$.value);
   }
@@ -146,31 +143,21 @@ export class MapComponent implements OnInit, OnDestroy {
 
   private windowSeconds(key: WindowKey): number {
     switch (key) {
-      case '15m':
-        return 15 * 60;
-      case '1h':
-        return 60 * 60;
-      case '6h':
-        return 6 * 60 * 60;
-      case '24h':
-        return 24 * 60 * 60;
-      default:
-        return 60 * 60;
+      case '15m': return 15 * 60;
+      case '1h': return 60 * 60;
+      case '6h': return 6 * 60 * 60;
+      case '24h': return 24 * 60 * 60;
+      default: return 60 * 60;
     }
   }
 
   private suggestLimit(key: WindowKey): number {
     switch (key) {
-      case '15m':
-        return 300;
-      case '1h':
-        return 800;
-      case '6h':
-        return 2000;
-      case '24h':
-        return 5000;
-      default:
-        return 800;
+      case '15m': return 300;
+      case '1h': return 800;
+      case '6h': return 2000;
+      case '24h': return 5000;
+      default: return 800;
     }
   }
 }

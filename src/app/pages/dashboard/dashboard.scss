@@ -1,81 +1,160 @@
-/* ===========================
-   Dashboard - Style amélioré
-   =========================== */
-
-:host {
-  display: block;
-}
-
-/* -------- Header flotte -------- */
-.fleet-header {
+/* ===== Header ===== */
+.dashHead {
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
-  gap: 18px;
-  margin-bottom: 16px;
+  gap: 16px;
+  margin-bottom: 14px;
 }
 
-.fleet-title {
-  h2 {
-    margin: 0;
-    font-size: 26px;
-    font-weight: 650;
-    letter-spacing: 0.2px;
-  }
+.dashHead .left h2 {
+  margin: 0;
+  font-weight: 850;
+  letter-spacing: 0.2px;
+  font-size: 26px;
 }
 
 .sub {
+  margin-top: 4px;
+  opacity: 0.85;
+  font-size: 13px;
   display: flex;
   gap: 8px;
   align-items: center;
-  font-size: 13px;
-  margin-top: 4px;
-  color: rgba(0, 0, 0, 0.65);
-
-  .sep {
-    opacity: 0.5;
-  }
-
-  b {
-    color: #2e7d32; /* MQTT ok */
-  }
 }
 
-.search {
-  width: min(460px, 100%);
+.sep {
+  opacity: 0.5;
 }
 
-/* -------- Cartes -------- */
-mat-card {
-  border-radius: 18px;
+.ok {
+  color: #2e7d32;
 }
 
-.fleet-list-card {
-  margin-bottom: 16px;
-}
-
-/* -------- Chips équipements -------- */
-.chips {
+.dashHead .right {
   display: flex;
+  gap: 12px;
+  align-items: center;
   flex-wrap: wrap;
-  gap: 10px;
 }
 
+.ctrl {
+  min-width: 240px;
+}
+
+.deviceCtrl {
+  min-width: 280px;
+}
+
+.searchCtrl {
+  min-width: 240px;
+}
+
+/* ===== Card table ===== */
+.cardTable {
+  border-radius: 16px;
+  overflow: hidden;
+  margin-bottom: 14px;
+}
+
+.cardHeader {
+  padding: 16px 16px 0 16px;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.cardHeader .title {
+  font-weight: 850;
+  font-size: 18px;
+}
+
+.muted {
+  opacity: 0.65;
+  font-size: 12px;
+}
+
+.hintRight {
+  opacity: 0.65;
+  font-size: 12px;
+}
+
+.tableWrap {
+  padding: 8px 12px 14px 12px;
+}
+
+/* ===== Table look pro ===== */
+.proTable {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0 10px; /* rows like cards */
+}
+
+:host ::ng-deep .proTable .mat-mdc-header-row {
+  height: 44px;
+}
+
+:host ::ng-deep .proTable .mat-mdc-header-cell {
+  font-weight: 800;
+  opacity: 0.75;
+  border-bottom: none;
+  padding-bottom: 6px;
+}
+
+:host ::ng-deep .proTable .mat-mdc-row {
+  background: #fff;
+  border-radius: 14px;
+  transition: transform 0.08s ease, box-shadow 0.14s ease;
+  cursor: pointer;
+}
+
+:host ::ng-deep .proTable .mat-mdc-row:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 26px rgba(0, 0, 0, 0.10);
+}
+
+:host ::ng-deep .proTable .mat-mdc-row.selected {
+  background: rgba(25, 118, 210, 0.10);
+  box-shadow: 0 12px 26px rgba(25, 118, 210, 0.16);
+}
+
+:host ::ng-deep .proTable .mat-mdc-cell {
+  border-bottom: none;
+  padding-top: 14px;
+  padding-bottom: 14px;
+}
+
+.deviceCell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.devName {
+  font-weight: 900;
+  letter-spacing: 0.2px;
+}
+
+.devSub {
+  font-size: 12px;
+  opacity: 0.6;
+}
+
+.num {
+  font-weight: 850;
+}
+
+/* ===== Status chip ===== */
 .chip {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
+  padding: 6px 10px;
   border-radius: 999px;
-  padding: 10px 14px;
-  text-transform: none;
-  line-height: 1.1;
-  border-width: 2px;
-  transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
-
-  &:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 10px 22px rgba(0, 0, 0, 0.10);
-  }
+  font-size: 12px;
+  font-weight: 900;
+  border: 1px solid rgba(0, 0, 0, 0.08);
 }
 
 .dot {
@@ -86,97 +165,100 @@ mat-card {
   background: rgba(0, 0, 0, 0.25);
 }
 
-.eui {
-  font-weight: 800;
-  font-size: 12px;
-  letter-spacing: 0.2px;
+.chip.on {
+  background: rgba(46, 125, 50, 0.12);
+  color: #2e7d32;
 }
 
-.meta {
-  opacity: 0.85;
-  font-size: 12px;
-  color: rgba(0, 0, 0, 0.62);
+.chip.off {
+  background: rgba(198, 40, 40, 0.12);
+  color: #c62828;
 }
 
-/* états */
-.chip.active {
-  border-color: #2e7d32;
-
-  .dot {
-    background: #2e7d32;
-  }
+.dot.on {
+  background: #2e7d32;
 }
 
-.chip.inactive {
-  border-color: #c62828;
-  opacity: 0.85;
-
-  .dot {
-    background: #c62828;
-  }
+.dot.off {
+  background: #c62828;
 }
 
-.chip.selected {
-  background: rgba(33, 150, 243, 0.10);
-  border-color: #2196f3;
-  box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.22);
-
-  .dot {
-    background: #2196f3;
-  }
+/* ===== Battery: number + small bar ===== */
+.batWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 110px;
 }
 
-/* -------- Carte flotte -------- */
+.batBar {
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.08);
+  position: relative;
+  overflow: hidden;
+}
+.batBar::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  width: calc(var(--p, 0) * 1%);
+  background: rgba(25, 118, 210, 0.85);
+  border-radius: 999px;
+}
+
+/* ===== Action button ===== */
+.actionCell {
+  text-align: right;
+}
+
+.btnView {
+  border-radius: 999px;
+  padding: 0 14px;
+}
+
+/* ===== Empty ===== */
+.empty {
+  padding: 14px;
+  opacity: 0.8;
+  border-radius: 14px;
+  background: rgba(0, 0, 0, 0.03);
+}
+
+/* ===== Map card ===== */
 .fleet-map-card {
-  margin-bottom: 22px;
-
-  mat-card-title {
-    font-weight: 650;
-  }
-
-  mat-card-content {
-    padding: 0; /* la carte prend tout */
-  }
-
-  app-fleet-map {
-    display: block;
-    height: 420px;
-    border-radius: 0 0 18px 18px;
-    overflow: hidden;
-  }
+  border-radius: 16px;
+  overflow: hidden;
+  margin-bottom: 18px;
 }
 
-.map-hint {
+.fleet-map-card mat-card-content {
+  padding: 0;
+}
+
+.fleet-map-card app-fleet-map {
+  display: block;
+  height: 420px;
+}
+
+.mapHint {
   padding: 10px 14px;
   font-size: 12px;
-  color: rgba(0, 0, 0, 0.62);
+  opacity: 0.78;
   background: rgba(0, 0, 0, 0.03);
-  border-top: 1px solid rgba(0, 0, 0, 0.08);
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
 }
 
-/* -------- Hints -------- */
-.hint {
-  opacity: 0.8;
-  font-size: 13px;
-}
-
-/* -------- Widgets existants (KPI/Map/Chart/Alerts) -------- */
+/* ===== KPI / Grid (si déjà existant) ===== */
 .grid {
   display: grid;
   grid-template-columns: repeat(12, 1fr);
   gap: 14px;
 }
 
-/* KPI cards */
 .kpi {
   grid-column: span 3;
   border-radius: 18px;
-  transition: transform 0.18s ease, box-shadow 0.18s ease;
-
-  &:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 12px 26px rgba(0, 0, 0, 0.12);
-  }
 }
 
 .wide {
@@ -184,7 +266,6 @@ mat-card {
   border-radius: 18px;
 }
 
-/* KPI layout */
 .kpi-content {
   display: flex;
   align-items: center;
@@ -204,14 +285,10 @@ mat-card {
   display: grid;
   place-items: center;
   background: rgba(0, 0, 0, 0.06);
-
-  mat-icon {
-    font-size: 22px;
-  }
 }
 
 .kpi-title {
-  font-weight: 800;
+  font-weight: 900;
 }
 
 .kpi-sub {
@@ -220,7 +297,7 @@ mat-card {
 }
 
 .kpi-value {
-  font-weight: 900;
+  font-weight: 950;
   font-size: 24px;
 }
 
@@ -228,7 +305,6 @@ mat-card {
   font-size: 14px;
 }
 
-/* Batterie OK / LOW (tu as déjà les classes côté HTML) */
 .kpi-battery {
   background: rgba(46, 125, 50, 0.10);
 }
@@ -237,8 +313,22 @@ mat-card {
   background: rgba(198, 40, 40, 0.10);
 }
 
-/* Alertes */
+/* Alerts */
 .alert {
-  padding: 10px
+  padding: 10px;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.03);
+  margin-bottom: 8px;
+}
 
+.alert.warn {
+  background: rgba(255, 152, 0, 0.12);
+}
+
+.alert.critical {
+  background: rgba(198, 40, 40, 0.12);
+}
+
+.hint {
+  opacity: 0.75;
 }

@@ -1,60 +1,149 @@
-<div class="fleet-header">
-  <div class="fleet-title">
+<!-- =========================
+     HEADER (comme ton exemple)
+     ========================= -->
+<div class="dashHead">
+  <div class="left">
     <h2>Dashboard</h2>
     <div class="sub">
-      <span>Flotte en temps réel</span>
+      <span>Flotte (REST)</span>
       <span class="sep">•</span>
-      <span>Statut MQTT: <b>{{ status$ | async }}</b></span>
+      <span>Statut API: <b class="ok">{{ (status$ | async) ?? '—' }}</b></span>
     </div>
   </div>
 
-  <mat-form-field appearance="outline" class="search">
-    <mat-label>Rechercher un équipement</mat-label>
-    <input matInput [formControl]="searchCtrl" placeholder="ex: 70B3D57E..." />
-    <mat-icon matSuffix>search</mat-icon>
-  </mat-form-field>
+  <div class="right">
+    <!-- Select appareil -->
+    <mat-form-field appearance="outline" class="ctrl deviceCtrl">
+      <mat-label>Appareil</mat-label>
+      <mat-select
+        [value]="(selected$ | async) ?? null"
+        (selectionChange)="onSelect($event.value)"
+      >
+        <mat-option
+          *ngFor="let d of (filtered$ | async) ?? []; trackBy: trackByEui"
+          [value]="d.device_eui"
+        >
+          {{ d.device_eui }} — {{ d.active ? 'actif' : 'inactif' }}
+        </mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    <!-- Recherche -->
+    <mat-form-field appearance="outline" class="ctrl searchCtrl">
+      <mat-label>Rechercher</mat-label>
+      <input matInput [formControl]="searchCtrl" placeholder="DRONE_A, 70B3..." />
+      <mat-icon matSuffix>search</mat-icon>
+    </mat-form-field>
+  </div>
 </div>
 
-<ng-container *ngIf="(filtered$ | async) as devices">
-  <mat-card class="fleet-list-card">
-    <mat-card-title>Équipements ({{ devices.length }})</mat-card-title>
+<!-- =========================
+     TABLE PRO "Appareils détectés"
+     ========================= -->
+<mat-card class="cardTable" *ngIf="(filtered$ | async) as devices">
+  <div class="cardHeader">
+    <div>
+      <div class="title">Appareils détectés</div>
+      <div class="muted">{{ devices.length }} équipement(s)</div>
+    </div>
+    <div class="hintRight">Cliquez sur une ligne pour visualiser</div>
+  </div>
 
-    <mat-card-content>
-      <div class="equip-list" *ngIf="devices.length > 0; else emptyState">
-        <ng-container *ngIf="(selected$ | async) as selected">
+  <mat-card-content>
+    <div class="tableWrap" *ngIf="devices.length > 0; else emptyState">
+      <!-- ✅ IMPORTANT : la table reste OUVERTE jusqu’à la fin -->
+      <table mat-table [dataSource]="devices" class="mat-elevation-z0 proTable">
 
-          <button
-            mat-stroked-button
-            class="equip-item"
-            *ngFor="let d of devices; trackBy: trackByEui"
-            (click)="onSelect(d.device_eui)"
-            [class.active]="d.active"
-            [class.inactive]="!d.active"
-            [class.selected]="d.device_eui === selected"
-          >
-            <span class="dot"></span>
-
-            <span class="eui">{{ d.device_eui }}</span>
-
-            <span class="meta">
-              Bat: {{ fmt(d.battery ?? d.last?.battery, 0) }}% •
-              RSSI: {{ fmt(d.rssi ?? d.last?.rssi, 0) }} •
-              vu il y a {{ secondsAgo(d.lastSeenMs) }}
+        <!-- Statut -->
+        <ng-container matColumnDef="status">
+          <th mat-header-cell *matHeaderCellDef>Statut</th>
+          <td mat-cell *matCellDef="let d">
+            <span class="chip" [class.on]="d.active" [class.off]="!d.active">
+              <span class="dot" [class.on]="d.active" [class.off]="!d.active"></span>
+              {{ d.active ? 'Actif' : 'Inactif' }}
             </span>
-          </button>
-
+          </td>
         </ng-container>
+
+        <!-- Device -->
+        <ng-container matColumnDef="device">
+          <th mat-header-cell *matHeaderCellDef>Device</th>
+          <td mat-cell *matCellDef="let d" class="deviceCell">
+            <span class="devName">{{ d.device_eui }}</span>
+            <span class="devSub" *ngIf="d.name">{{ d.name }}</span>
+          </td>
+        </ng-container>
+
+        <!-- Dernier msg -->
+        <ng-container matColumnDef="last">
+          <th mat-header-cell *matHeaderCellDef>Dernier msg</th>
+          <td mat-cell *matCellDef="let d">
+            <span class="muted">il y a</span>
+            <b>{{ secondsAgo(d.lastSeenMs) }}</b>
+          </td>
+        </ng-container>
+
+        <!-- Batterie -->
+        <ng-container matColumnDef="battery">
+          <th mat-header-cell *matHeaderCellDef>Batterie</th>
+          <td mat-cell *matCellDef="let d">
+            <div class="batWrap">
+              <span class="num">{{ fmt(d.battery ?? d.last?.battery, 0) }}%</span>
+              <span
+                class="batBar"
+                [style.--p.%]="fmt(d.battery ?? d.last?.battery, 0)"
+              ></span>
+            </div>
+          </td>
+        </ng-container>
+
+        <!-- RSSI -->
+        <ng-container matColumnDef="rssi">
+          <th mat-header-cell *matHeaderCellDef>RSSI</th>
+          <td mat-cell *matCellDef="let d">
+            <span class="num">{{ fmt(d.rssi ?? d.last?.rssi, 0) }} dBm</span>
+          </td>
+        </ng-container>
+
+        <!-- Action -->
+        <ng-container matColumnDef="action">
+          <th mat-header-cell *matHeaderCellDef></th>
+          <td mat-cell *matCellDef="let d" class="actionCell">
+            <button
+              mat-stroked-button
+              class="btnView"
+              (click)="onSelect(d.device_eui); $event.stopPropagation()"
+            >
+              Visualiser
+            </button>
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="['status','device','last','battery','rssi','action']"></tr>
+
+        <ng-container *ngIf="(selected$ | async) as selected">
+          <tr
+            mat-row
+            *matRowDef="let row; columns: ['status','device','last','battery','rssi','action'];"
+            (click)="onSelect(row.device_eui)"
+            [class.selected]="row.device_eui === selected"
+          ></tr>
+        </ng-container>
+      </table>
+    </div>
+
+    <ng-template #emptyState>
+      <div class="empty">
+        Aucun équipement. Vérifie l’API <b>/api/v1/devices</b> et <b>/api/v1/telemetry/latest</b>.
       </div>
+    </ng-template>
+  </mat-card-content>
+</mat-card>
 
-      <ng-template #emptyState>
-        <div class="hint">
-          Aucun équipement reçu. Vérifie le topic <b>drone/telemetry</b>.
-        </div>
-      </ng-template>
-    </mat-card-content>
-  </mat-card>
-
-  <!-- ✅ UNE SEULE CARTE -->
+<!-- =========================
+     CARTE FLOTTE
+     ========================= -->
+<ng-container *ngIf="(filtered$ | async) as devices">
   <mat-card class="map-card fleet-map-card">
     <mat-card-title>Carte flotte</mat-card-title>
 
@@ -68,8 +157,8 @@
           (selectDevice)="onSelect($event)"
         ></app-fleet-map>
 
-        <div class="map-hint">
-          🟢 Actif • 🔴 Inactif • Clique un marker ou un équipement pour sélectionner
+        <div class="mapHint">
+          🟢 Actif • 🔴 Inactif • Cliquez sur un marker ou une ligne
         </div>
       </ng-container>
     </mat-card-content>
@@ -78,32 +167,28 @@
 
 <!-- =========================
      KPI / CHART / ALERTS
-========================= -->
-<p>Statut MQTT: <b>{{ status$ | async }}</b></p>
-
+     ========================= -->
 <ng-container *ngIf="(telemetry$ | async) as t; else noData">
   <ng-container *ngIf="cfg$ | async as cfg">
-
     <div class="grid">
       <ng-container *ngFor="let w of cfg.widgets">
         <ng-container *ngIf="w.enabled">
 
           <!-- KPI Battery -->
-          <mat-card *ngIf="w.type === 'kpi-battery'"
-                    class="kpi"
-                    [class.kpi-battery]="(t?.battery ?? 0) >= cfg.alertThresholds.batteryLow"
-                    [class.kpi-battery-low]="(t?.battery ?? 0) < cfg.alertThresholds.batteryLow">
+          <mat-card
+            *ngIf="w.type === 'kpi-battery'"
+            class="kpi"
+            [class.kpi-battery]="(t?.battery ?? 0) >= cfg.alertThresholds.batteryLow"
+            [class.kpi-battery-low]="(t?.battery ?? 0) < cfg.alertThresholds.batteryLow"
+          >
             <mat-card-content class="kpi-content">
               <div class="kpi-left">
-                <div class="kpi-icon">
-                  <mat-icon>battery_full</mat-icon>
-                </div>
+                <div class="kpi-icon"><mat-icon>battery_full</mat-icon></div>
                 <div>
                   <div class="kpi-title">{{ w.title }}</div>
                   <div class="kpi-sub">Niveau actuel</div>
                 </div>
               </div>
-
               <div class="kpi-right">
                 <div class="kpi-value">{{ fmt(t?.battery, 0) }}%</div>
               </div>
@@ -114,15 +199,12 @@
           <mat-card *ngIf="w.type === 'kpi-temp'" class="kpi kpi-temp">
             <mat-card-content class="kpi-content">
               <div class="kpi-left">
-                <div class="kpi-icon">
-                  <mat-icon>device_thermostat</mat-icon>
-                </div>
+                <div class="kpi-icon"><mat-icon>device_thermostat</mat-icon></div>
                 <div>
                   <div class="kpi-title">{{ w.title }}</div>
                   <div class="kpi-sub">Capteur interne</div>
                 </div>
               </div>
-
               <div class="kpi-right">
                 <div class="kpi-value">{{ fmt(t?.temp, 1) }}°C</div>
               </div>
@@ -133,15 +215,12 @@
           <mat-card *ngIf="w.type === 'kpi-rssi'" class="kpi kpi-rssi">
             <mat-card-content class="kpi-content">
               <div class="kpi-left">
-                <div class="kpi-icon">
-                  <mat-icon>network_cell</mat-icon>
-                </div>
+                <div class="kpi-icon"><mat-icon>network_cell</mat-icon></div>
                 <div>
                   <div class="kpi-title">{{ w.title }}</div>
                   <div class="kpi-sub">Qualité du lien</div>
                 </div>
               </div>
-
               <div class="kpi-right">
                 <div class="kpi-value">{{ fmt(t?.rssi, 0) }} dBm</div>
               </div>
@@ -152,43 +231,45 @@
           <mat-card *ngIf="w.type === 'kpi-gps'" class="kpi kpi-gps">
             <mat-card-content class="kpi-content">
               <div class="kpi-left">
-                <div class="kpi-icon">
-                  <mat-icon>my_location</mat-icon>
-                </div>
+                <div class="kpi-icon"><mat-icon>my_location</mat-icon></div>
                 <div>
                   <div class="kpi-title">{{ w.title }}</div>
+                  <div class="kpi-sub">Position</div>
                 </div>
               </div>
-
               <div class="kpi-right">
-                <div class="kpi-value small">{{ fmt(t?.lat, 2) }}, {{ fmt(t?.lng, 2) }}</div>
+                <div class="kpi-value small">
+                  {{ fmt(t?.lat, 4) }}, {{ fmt(t?.lng, 4) }}
+                </div>
               </div>
             </mat-card-content>
           </mat-card>
 
-          <!-- Graphique -->
+          <!-- Chart -->
           <mat-card *ngIf="w.type === 'chart-telemetry'" class="wide">
             <mat-card-title>{{ w.title }} ({{ cfg.chartType }})</mat-card-title>
             <mat-card-content>
               <app-telemetry-chart
                 [chartType]="cfg.chartType"
                 [history]="history"
-                [point]="t">
-              </app-telemetry-chart>
+                [point]="t"
+              ></app-telemetry-chart>
             </mat-card-content>
           </mat-card>
 
-          <!-- Alertes -->
+          <!-- Alerts -->
           <mat-card *ngIf="w.type === 'alerts'" class="wide">
             <mat-card-title>{{ w.title }}</mat-card-title>
             <mat-card-content>
               <div *ngIf="alerts$ | async as a">
                 <p *ngIf="a.length === 0" class="hint">Aucune alerte.</p>
 
-                <div *ngFor="let item of a"
-                     class="alert"
-                     [class.critical]="item.level === 'critical'"
-                     [class.warn]="item.level === 'warn'">
+                <div
+                  *ngFor="let item of a"
+                  class="alert"
+                  [class.critical]="item.level === 'critical'"
+                  [class.warn]="item.level === 'warn'"
+                >
                   <b>{{ item.level }}</b> — {{ item.message }}
                 </div>
               </div>
@@ -198,7 +279,6 @@
         </ng-container>
       </ng-container>
     </div>
-
   </ng-container>
 </ng-container>
 

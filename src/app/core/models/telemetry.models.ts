@@ -1,7 +1,7 @@
 // src/app/core/models/telemetry.models.ts
 
 export interface TelemetryPoint {
-  ts: number;          // epoch seconds
+  ts: number; // epoch seconds
   lat: number;
   lng: number;
   temp?: number | null;
@@ -12,6 +12,11 @@ export interface TelemetryPoint {
 
 export interface DeviceSummary {
   device_eui: string;
+
+  // ✅ metadata (SaaS-ready)
+  name?: string | null;
+  isActive?: boolean | null;
+  createdAt?: string | null;
 
   // ✅ champs normalisés (recommandés)
   lat: number | null;
@@ -24,15 +29,7 @@ export interface DeviceSummary {
 
   active: boolean;
 
-
-  //meta
-
-  // méta (utile Dashboard / SaaS)
-  name?: string;
-  is_active?: boolean;
-  created_at?: string;
-
   // ✅ compat legacy (pour éviter erreurs dans templates/pages existants)
-  lastSeenMs?: number;        // Date.now()
+  lastSeenMs?: number; // Date.now()
   last?: Partial<TelemetryPoint>; // {lat,lng,ts,temp,battery,rssi}
 }

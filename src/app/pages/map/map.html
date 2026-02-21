@@ -1,5 +1,4 @@
 <div class="page">
-  <!-- TOP BAR -->
   <div class="top">
     <div class="titleBlock">
       <h2>Carte GPS</h2>
@@ -13,7 +12,6 @@
     </div>
 
     <div class="topActions">
-      <!-- Fenêtre historique -->
       <mat-button-toggle-group
         [value]="(windowKey$ | async) ?? '1h'"
         (change)="setWindow($event.value)"
@@ -26,14 +24,12 @@
         <mat-button-toggle value="24h">24 h</mat-button-toggle>
       </mat-button-toggle-group>
 
-      <!-- Actions -->
       <button mat-stroked-button (click)="refresh()">Rafraîchir</button>
 
       <button
         mat-stroked-button
         (click)="follow = true; refresh()"
         [disabled]="!(selected$ | async)"
-        aria-label="Centrer sur l’équipement sélectionné"
       >
         Centrer
       </button>
@@ -42,28 +38,23 @@
         mat-stroked-button
         (click)="clearHistory()"
         [disabled]="!history || history.length === 0"
-        aria-label="Effacer la trajectoire affichée"
       >
         Effacer trajet
       </button>
 
-      <!-- Toggle affichage -->
       <mat-slide-toggle
         [checked]="showHistory"
         (change)="showHistory = $event.checked"
-        aria-label="Afficher la trajectoire"
       >
         Trajectoire
       </mat-slide-toggle>
     </div>
   </div>
 
-  <!-- MAP EN HAUT -->
   <mat-card class="mapCard">
     <mat-card-title>Carte</mat-card-title>
 
     <mat-card-content class="mapWrap">
-      <!-- Map + devices -->
       <ng-container *ngIf="(filtered$ | async) as devices; else loadingDevices">
         <ng-container *ngIf="devices.length > 0; else emptyDevices">
           <app-fleet-map
@@ -73,13 +64,12 @@
             [history]="history ?? null"
             [follow]="follow"
             [showHistory]="showHistory"
-            
+            (selectDevice)="onSelect($event)"
           >
           </app-fleet-map>
         </ng-container>
       </ng-container>
 
-      <!-- Footer -->
       <div class="mapFooter">
         <div class="legend">
           <span><span class="lgDot ok"></span> Actif</span>
@@ -107,7 +97,6 @@
         </div>
       </div>
 
-      <!-- Templates -->
       <ng-template #loadingDevices>
         <div class="empty">Chargement des équipements…</div>
       </ng-template>
@@ -118,7 +107,6 @@
     </mat-card-content>
   </mat-card>
 
-  <!-- LISTE ÉQUIPEMENTS EN BAS -->
   <mat-card class="panel">
     <mat-card-title>
       Équipements
@@ -142,14 +130,10 @@
 
               <div class="main">
                 <div class="eui">{{ d.device_eui }}</div>
-
                 <div class="meta">
-                  Bat:
-                  <b>{{ d.battery ?? '—' }}</b>% •
-                  RSSI:
-                  <b>{{ d.rssi ?? '—' }}</b> •
-                  Vu il y a
-                  <b>{{ secondsAgoTs(d.lastTs) }}</b>
+                  Bat: <b>{{ d.battery ?? '—' }}</b>% •
+                  RSSI: <b>{{ d.rssi ?? '—' }}</b> •
+                  vu il y a <b>{{ secondsAgoTs(d.lastTs) }}</b>
                 </div>
               </div>
 

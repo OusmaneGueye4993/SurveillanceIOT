@@ -46,7 +46,6 @@ export class TelemetryApiService {
   private normalizePoint(dto: any): TelemetryPoint {
     let ts = this.toNum(dto?.ts) ?? Math.floor(Date.now() / 1000);
     if (ts > 1_000_000_000_000) ts = Math.floor(ts / 1000); // ms -> s
-
     return {
       ts,
       lat: this.toNum(dto?.lat) ?? 0,
@@ -58,12 +57,12 @@ export class TelemetryApiService {
     };
   }
 
-  /** Fleet (liste devices) */
+  /** GET /api/v1/devices/ */
   getDevices(): Observable<DevicesListResponse> {
     return this.http.get<DevicesListResponse>(`${this.base}/v1/devices/`);
   }
 
-  /** Fleet (dernier point de chaque device) */
+  /** GET /api/v1/telemetry/latest/ */
   getLatestAll(): Observable<TelemetryLatestAllResponse> {
     return this.http.get<any>(`${this.base}/v1/telemetry/latest/`).pipe(
       map((res) => {
@@ -79,6 +78,19 @@ export class TelemetryApiService {
     );
   }
 
+  /** GET /api/v1/telemetry/latest/<device_eui>/ */
+  getLatest(deviceEui: string): Observable<TelemetryLatestResponse> {
+    return this.http
+      .get<any>(`${this.base}/v1/telemetry/latest/${encodeURIComponent(deviceEui)}/`)
+      .pipe(
+        map((dto) => ({
+          device_eui: String(dto?.device_eui ?? deviceEui),
+          ...this.normalizePoint(dto),
+        }))
+      );
+  }
+
+  /** GET /api/v1/telemetry/history/<device_eui>/?limit&fromTs&toTs */
   getHistory(
     deviceEui: string,
     opts?: { limit?: number; fromTs?: number; toTs?: number }
@@ -103,17 +115,7 @@ export class TelemetryApiService {
       );
   }
 
-  getLatest(deviceEui: string): Observable<TelemetryLatestResponse> {
-    return this.http
-      .get<any>(`${this.base}/v1/telemetry/latest/${encodeURIComponent(deviceEui)}/`)
-      .pipe(
-        map((dto) => ({
-          device_eui: String(dto?.device_eui ?? deviceEui),
-          ...this.normalizePoint(dto),
-        }))
-      );
-  }
-
+  /** POST /api/v1/telemetry/ingest/ */
   ingest(payload: any): Observable<any> {
     return this.http.post(`${this.base}/v1/telemetry/ingest/`, payload);
   }

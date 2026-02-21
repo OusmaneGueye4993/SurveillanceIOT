@@ -3,13 +3,11 @@ import {
   BehaviorSubject,
   combineLatest,
   map,
-  Observable,
   Subscription,
   timer,
   forkJoin,
   of,
   catchError,
-  tap,
 } from 'rxjs';
 
 import { DashboardSettingsService } from '../settings/dashboard-settings.service';
@@ -18,16 +16,8 @@ import { DeviceSummary } from '../models/telemetry.models';
 
 type ConnStatus = 'disconnected' | 'connecting' | 'connected';
 
-/**
- * Store "fleet" (liste devices + dernier point) — backend-first (REST).
- * - Dashboard: liste + mini-map
- * - Map: markers + trajectoire via history(device)
- *
- * Polling ref-counté: startFleetPolling() / stopFleetPolling()
- */
 @Injectable({ providedIn: 'root' })
 export class TelemetryStoreService implements OnDestroy {
-  /** Timeout actif/inactif (ms) — vient de Settings (staleSeconds) */
   private activeTimeoutMs = 10_000;
 
   private statusSubject = new BehaviorSubject<ConnStatus>('disconnected');
@@ -63,18 +53,14 @@ export class TelemetryStoreService implements OnDestroy {
     private settings: DashboardSettingsService,
     private api: TelemetryApiService
   ) {
-    // staleSeconds depuis config
     this.sub.add(
       this.settings.config$.subscribe((cfg) => {
         const sec = Number(cfg?.alertThresholds?.staleSeconds);
-        if (Number.isFinite(sec) && sec > 0) {
-          this.activeTimeoutMs = sec * 1000;
-        }
+        if (Number.isFinite(sec) && sec > 0) this.activeTimeoutMs = sec * 1000;
       })
     );
   }
 
-  /** Démarre un polling fleet (ref-counté). */
   startFleetPolling(intervalMs = 5000): void {
     this.pollIntervalMs = intervalMs;
 
@@ -88,7 +74,6 @@ export class TelemetryStoreService implements OnDestroy {
     });
   }
 
-  /** Stoppe le polling si plus personne ne le demande. */
   stopFleetPolling(): void {
     this.pollRefCount = Math.max(0, this.pollRefCount - 1);
     if (this.pollRefCount > 0) return;
@@ -97,17 +82,10 @@ export class TelemetryStoreService implements OnDestroy {
       this.pollSub.unsubscribe();
       this.pollSub = null;
     }
-    // On ne vide pas les données: on garde le dernier snapshot en UI.
     this.statusSubject.next('disconnected');
   }
 
-  /** Recharge une fois la flotte (devices + latest) et met à jour le store. */
   refreshFleetOnce(): void {
-    // éviter de spammer "connecting" à chaque tick
-    if (this.statusSubject.value === 'disconnected') {
-      this.statusSubject.next('connecting');
-    }
-
     forkJoin({
       devicesRes: this.api.getDevices().pipe(
         catchError((err) => {
@@ -121,99 +99,119 @@ export class TelemetryStoreService implements OnDestroy {
           return of({ count: 0, items: [] });
         })
       ),
-    })
-      .pipe(
-        tap(({ devicesRes, latestRes }) => {
-          const nowMs = Date.now();
+    }).subscribe({
+      next: ({ devicesRes, latestRes }) => {
+        const nowMs = Date.now();
 
-          // 1) s'assurer que tous les devices existent dans la map
-          for (const d of devicesRes.devices || []) {
-            const eui = String(d?.device_eui || '').trim();
-            if (!eui) continue;
+        // 1) Créer/mettre à jour les devices (même sans telemetry)
+        for (const d of devicesRes.devices || []) {
+          const eui = String(d?.device_eui || '').trim();
+          if (!eui) continue;
 
-            if (!this.devicesMap.has(eui)) {
-              this.devicesMap.set(eui, {
-                device_eui: eui,
-                lat: null,
-                lng: null,
-                lastTs: null,
-                temp: null,
-                battery: null,
-                rssi: null,
-                snr: null,
-                active: false,
-                lastSeenMs: undefined,
-                last: {},
-              });
-            }
-          }
+          const prev = this.devicesMap.get(eui);
+          const nextMeta = {
+            name: (d?.name ?? null) as string | null,
+            isActive: (d?.is_active ?? null) as boolean | null,     // ✅ snake -> camel
+            createdAt: (d?.created_at ?? null) as string | null,    // ✅ snake -> camel
+          };
 
-          // 2) appliquer latest points
-          for (const p of latestRes.items || []) {
-            const eui = String((p as any)?.device_eui || '').trim();
-            if (!eui) continue;
-
-            const prev = this.devicesMap.get(eui);
-            const lastSeenMs = p.ts ? p.ts * 1000 : nowMs;
-
-            const next: DeviceSummary = {
+          if (!prev) {
+            this.devicesMap.set(eui, {
               device_eui: eui,
-              lat: Number.isFinite(p.lat) ? p.lat : prev?.lat ?? null,
-              lng: Number.isFinite(p.lng) ? p.lng : prev?.lng ?? null,
-              lastTs: p.ts ?? prev?.lastTs ?? null,
-              temp: p.temp ?? prev?.temp ?? null,
-              battery: p.battery ?? prev?.battery ?? null,
-              rssi: p.rssi ?? prev?.rssi ?? null,
-              snr: p.snr ?? prev?.snr ?? null,
-              active: true, // recalculé juste après
-              lastSeenMs,
-              last: {
-                ts: p.ts,
-                lat: p.lat as any,
-                lng: p.lng as any,
-                temp: p.temp ?? null,
-                battery: p.battery ?? null,
-                rssi: p.rssi ?? null,
-              },
-            };
+              ...nextMeta,
 
-            this.devicesMap.set(eui, next);
+              lastTs: null,
+              lastSeenMs: undefined,
+              lat: null,
+              lng: null,
+              temp: null,
+              battery: null,
+              rssi: null,
+              snr: null,
+              active: false,
+              last: {},
+            });
+          } else {
+            this.devicesMap.set(eui, {
+              ...prev,
+              ...nextMeta,
+            });
           }
+        }
 
-          // 3) recalcul actif/inactif (pour tous)
-          for (const [eui, d] of this.devicesMap.entries()) {
-            const lastSeen = d.lastSeenMs ?? null;
-            const active =
-              lastSeen != null ? nowMs - lastSeen <= this.activeTimeoutMs : false;
-            if (active !== d.active) {
-              this.devicesMap.set(eui, { ...d, active });
-            }
+        // 2) Appliquer latest points
+        for (const p of latestRes.items || []) {
+          const eui = String((p as any)?.device_eui || '').trim();
+          if (!eui) continue;
+
+          const prev = this.devicesMap.get(eui);
+          const lastSeenMs = p.ts ? p.ts * 1000 : nowMs;
+
+          const next: DeviceSummary = {
+            device_eui: eui,
+
+            // garder metadata si déjà connue
+            name: prev?.name ?? null,
+            isActive: prev?.isActive ?? null,
+            createdAt: prev?.createdAt ?? null,
+
+            lastTs: p.ts ?? prev?.lastTs ?? null,
+            lastSeenMs,
+
+            // ⚠️ FleetMap lit d.last.lat/lng
+            lat: Number.isFinite(p.lat) ? p.lat : prev?.lat ?? null,
+            lng: Number.isFinite(p.lng) ? p.lng : prev?.lng ?? null,
+
+            temp: p.temp ?? prev?.temp ?? null,
+            battery: p.battery ?? prev?.battery ?? null,
+            rssi: p.rssi ?? prev?.rssi ?? null,
+            snr: p.snr ?? prev?.snr ?? null,
+
+            active: true, // recalcul ensuite
+            last: {
+              ts: p.ts,
+              lat: p.lat as any,
+              lng: p.lng as any,
+              temp: p.temp ?? null,
+              battery: p.battery ?? null,
+              rssi: p.rssi ?? null,
+            },
+          };
+
+          this.devicesMap.set(eui, next);
+        }
+
+        // 3) Recalcul active/inactive (basé sur lastSeenMs)
+        for (const [eui, d] of this.devicesMap.entries()) {
+          const lastSeen = d.lastSeenMs ?? null;
+          const active =
+            lastSeen != null ? nowMs - lastSeen <= this.activeTimeoutMs : false;
+
+          if (active !== d.active) {
+            this.devicesMap.set(eui, { ...d, active });
           }
+        }
 
-          // 4) auto-select si rien de choisi
-          if (!this.selectedSubject.value) {
-            const candidates = Array.from(this.devicesMap.values());
-            const firstActive = candidates.find((x) => x.active);
-            const firstAny = candidates[0];
-            if (firstActive) this.selectedSubject.next(firstActive.device_eui);
-            else if (firstAny) this.selectedSubject.next(firstAny.device_eui);
-          }
+        // 4) Auto-select si rien de choisi
+        if (!this.selectedSubject.value) {
+          const list = Array.from(this.devicesMap.values());
+          const firstActive = list.find((x) => x.active);
+          const firstAny = list[0];
+          this.selectedSubject.next((firstActive ?? firstAny)?.device_eui ?? null);
+        }
 
-          this.emitDevices();
+        this.emitDevices();
 
-          // status
-          const ok =
-            (devicesRes.devices?.length ?? 0) > 0 ||
-            (latestRes.items?.length ?? 0) > 0;
-          this.statusSubject.next(ok ? 'connected' : 'disconnected');
-        })
-      )
-      .subscribe({
-        error: (err) => {
-          console.error('[Fleet] refreshFleetOnce failed', err);
-          this.statusSubject.next('disconnected');
-        },
-      });
+        const ok =
+          (devicesRes.devices?.length ?? 0) > 0 ||
+          (latestRes.items?.length ?? 0) > 0;
+        this.statusSubject.next(ok ? 'connected' : 'disconnected');
+      },
+      error: (err) => {
+        console.error('[Fleet] refresh failed', err);
+        this.statusSubject.next('disconnected');
+      },
+    });
   }
 
   setSearch(q: string): void {
