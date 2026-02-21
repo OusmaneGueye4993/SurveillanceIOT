@@ -24,6 +24,14 @@ export interface DeviceSummary {
 
   active: boolean;
 
+
+  //meta
+
+  // méta (utile Dashboard / SaaS)
+  name?: string;
+  is_active?: boolean;
+  created_at?: string;
+
   // ✅ compat legacy (pour éviter erreurs dans templates/pages existants)
   lastSeenMs?: number;        // Date.now()
   last?: Partial<TelemetryPoint>; // {lat,lng,ts,temp,battery,rssi}

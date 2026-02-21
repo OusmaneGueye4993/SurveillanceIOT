@@ -7,7 +7,7 @@
       <div class="sub">
         Historique & flotte
         <span class="sep">•</span>
-        Statut MQTT:
+        Statut API:
         <b>{{ (status$ | async) ?? '—' }}</b>
       </div>
     </div>
@@ -27,9 +27,7 @@
       </mat-button-toggle-group>
 
       <!-- Actions -->
-      <button mat-stroked-button (click)="refresh()">
-        Rafraîchir
-      </button>
+      <button mat-stroked-button (click)="refresh()">Rafraîchir</button>
 
       <button
         mat-stroked-button
@@ -75,7 +73,7 @@
             [history]="history ?? null"
             [follow]="follow"
             [showHistory]="showHistory"
-            (selectDevice)="onSelect($event)"
+            
           >
           </app-fleet-map>
         </ng-container>
@@ -97,8 +95,7 @@
           </span>
 
           <span class="pill" *ngIf="!loadingHistory && !historyError">
-            Points:
-            <b>{{ history?.length ?? 0 }}</b>
+            Points: <b>{{ history?.length ?? 0 }}</b>
           </span>
 
           <span
@@ -135,7 +132,7 @@
             <a
               mat-list-item
               class="equip-item"
-              *ngFor="let d of devices; trackBy: trackByEui"
+              *ngFor="let d of devices"
               (click)="onSelect(d.device_eui)"
               [class.selected]="d.device_eui === selected"
               role="button"
@@ -147,9 +144,12 @@
                 <div class="eui">{{ d.device_eui }}</div>
 
                 <div class="meta">
-                  Bat: {{ fmt(d.battery, 0) }}% •
-                  RSSI: {{ fmt(d.rssi, 0) }} •
-                  vu il y a {{ secondsAgoTs(d.lastTs) }}
+                  Bat:
+                  <b>{{ d.battery ?? '—' }}</b>% •
+                  RSSI:
+                  <b>{{ d.rssi ?? '—' }}</b> •
+                  Vu il y a
+                  <b>{{ secondsAgoTs(d.lastTs) }}</b>
                 </div>
               </div>
 

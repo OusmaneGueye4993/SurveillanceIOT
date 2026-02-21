@@ -42,7 +42,7 @@ type WindowKey = '15m' | '1h' | '6h' | '24h';
   styleUrls: ['./map.scss'],
 })
 export class MapComponent implements OnInit, OnDestroy {
-  status$!: Observable<any>;
+  status$!: Observable<'disconnected' | 'connecting' | 'connected'>;
   filtered$!: Observable<DeviceSummary[]>;
   selected$!: Observable<string | null>;
 
@@ -68,7 +68,8 @@ export class MapComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    this.store.connectMqtt();
+    // ✅ Backend-first: polling REST (devices + latest)
+    this.store.startFleetPolling(5000);
 
     // ✅ charge l’historique à chaque changement (selected + window)
     this.sub.add(
@@ -89,6 +90,7 @@ export class MapComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.sub.unsubscribe();
+    this.store.stopFleetPolling();
   }
 
   onSelect(eui: string) {
@@ -101,7 +103,8 @@ export class MapComponent implements OnInit, OnDestroy {
   }
 
   refresh() {
-    // force reload
+    // refresh markers + reload history
+    this.store.refreshFleetOnce();
     this.windowKey$.next(this.windowKey$.value);
   }
 
@@ -125,88 +128,49 @@ export class MapComponent implements OnInit, OnDestroy {
     this.loadingHistory = true;
     this.historyError = null;
 
-    return this.api
-      .getHistory(deviceEui, { limit, fromTs: fromSec, toTs: nowSec })
-      .pipe(
-        tap({
-          next: (res) => {
-            this.history = this.cleanHistory(res?.history ?? []);
-            this.loadingHistory = false;
-          },
-          error: (err) => {
-            console.error(err);
-            this.loadingHistory = false;
-            this.historyError = 'Erreur lors du chargement de l’historique';
-            this.history = [];
-          },
-        })
-      );
+    return this.api.getHistory(deviceEui, { fromTs: fromSec, toTs: nowSec, limit }).pipe(
+      tap({
+        next: (res) => {
+          this.history = res?.history ?? [];
+          this.loadingHistory = false;
+        },
+        error: (err) => {
+          console.error(err);
+          this.history = [];
+          this.loadingHistory = false;
+          this.historyError = 'Impossible de charger l’historique';
+        },
+      })
+    );
   }
 
-  private windowSeconds(k: WindowKey): number {
-    switch (k) {
-      case '15m': return 15 * 60;
-      case '1h': return 60 * 60;
-      case '6h': return 6 * 60 * 60;
-      case '24h': return 24 * 60 * 60;
+  private windowSeconds(key: WindowKey): number {
+    switch (key) {
+      case '15m':
+        return 15 * 60;
+      case '1h':
+        return 60 * 60;
+      case '6h':
+        return 6 * 60 * 60;
+      case '24h':
+        return 24 * 60 * 60;
+      default:
+        return 60 * 60;
     }
   }
 
-  private suggestLimit(k: WindowKey): number {
-    switch (k) {
-      case '15m': return 300;
-      case '1h': return 800;
-      case '6h': return 2000;
-      case '24h': return 5000;
+  private suggestLimit(key: WindowKey): number {
+    switch (key) {
+      case '15m':
+        return 300;
+      case '1h':
+        return 800;
+      case '6h':
+        return 2000;
+      case '24h':
+        return 5000;
+      default:
+        return 800;
     }
-  }
-
-  // ✅ tri + filtre + dedupe => polyline propre
-  private cleanHistory(list: TelemetryPoint[]): TelemetryPoint[] {
-    const pts = (list ?? [])
-      .map((p) => ({
-        ...p,
-        ts: Number((p as any).ts),
-        lat: Number((p as any).lat),
-        lng: Number((p as any).lng),
-      }))
-      .filter(
-        (p) =>
-          Number.isFinite(p.ts) &&
-          Number.isFinite(p.lat) &&
-          Number.isFinite(p.lng)
-      );
-
-    // polyline: ASC chronologique
-    pts.sort((a, b) => a.ts - b.ts);
-
-    // dedupe lat/lng consécutifs
-    const eps = 1e-7;
-    const out: TelemetryPoint[] = [];
-    for (const p of pts) {
-      const prev = out[out.length - 1];
-      if (
-        prev &&
-        Math.abs(prev.lat - p.lat) < eps &&
-        Math.abs(prev.lng - p.lng) < eps
-      ) {
-        continue;
-      }
-      out.push(p);
-    }
-
-    // option perf: limiter les points affichés
-    return out.length > 1500 ? out.slice(out.length - 1500) : out;
-  }
-
-  trackByEui(_: number, d: DeviceSummary) {
-    return d.device_eui;
-  }
-
-  fmt(v: any, digits = 0): string {
-    const n = Number(v);
-    if (!Number.isFinite(n)) return '—';
-    if (Number.isInteger(n)) return String(n);
-    return n.toFixed(digits);
   }
 }

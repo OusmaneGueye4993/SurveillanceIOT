@@ -13,12 +13,9 @@ import { MatButtonModule } from '@angular/material/button';
 
 import { TelemetryStoreService } from '../../core/store/telemetry-store.service';
 import { DeviceSummary } from '../../core/models/telemetry.models';
-
 import { DashboardSettingsService } from '../../core/settings/dashboard-settings.service';
 
 import { FleetMapComponent } from '../../shared/fleet-map/fleet-map';
-
-// garde tes composants existants
 import { MiniMapComponent } from '../../shared/mini-map/mini-map';
 import { TelemetryChartComponent } from '../telemetry/telemetry';
 
@@ -72,7 +69,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
     this.cfg$ = this.settings.config$;
 
-    this.fleet.connectMqtt();
+    // ✅ Backend-first: polling REST (devices + latest)
+    this.fleet.startFleetPolling(5000);
 
     // Recherche (filtre liste)
     this.sub.add(
@@ -113,7 +111,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       })
     );
 
-    // construire history pour chart (accumulation)
+    // construire history pour chart (accumulation) — basé sur les snapshots REST
     this.sub.add(
       this.telemetry$.subscribe((t) => {
         if (!t) return;
@@ -123,7 +121,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
         const same =
           last &&
           Math.abs(last.lat - t.lat) < 1e-7 &&
-          Math.abs(last.lng - t.lng) < 1e-7;
+          Math.abs(last.lng - t.lng) < 1e-7 &&
+          Math.abs(last.battery - t.battery) < 1e-7 &&
+          Math.abs(last.rssi - t.rssi) < 1e-7;
 
         if (same) return;
 
@@ -143,17 +143,26 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
         const bat = Number(t.battery);
         if (Number.isFinite(bat) && Number.isFinite(batLow) && bat < batLow) {
-          out.push({ level: 'critical', message: `Batterie faible: ${Math.round(bat)}%` });
+          out.push({
+            level: 'critical',
+            message: `Batterie faible: ${Math.round(bat)}%`,
+          });
         }
 
         const rssi = Number(t.rssi);
         if (Number.isFinite(rssi) && Number.isFinite(rssiLow) && rssi < rssiLow) {
-          out.push({ level: 'warn', message: `Signal faible: ${Math.round(rssi)} dBm` });
+          out.push({
+            level: 'warn',
+            message: `Signal faible (RSSI): ${Math.round(rssi)} dBm`,
+          });
         }
 
         const temp = Number(t.temp);
         if (Number.isFinite(temp) && Number.isFinite(tempHigh) && temp > tempHigh) {
-          out.push({ level: 'warn', message: `Température élevée: ${temp.toFixed(1)}°C` });
+          out.push({
+            level: 'warn',
+            message: `Température élevée: ${Math.round(temp)}°C`,
+          });
         }
 
         return out;
@@ -163,17 +172,18 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.sub.unsubscribe();
+    // stop ref-counted polling
+    this.fleet.stopFleetPolling();
   }
 
   onSelect(eui: string) {
-    // ✅ sélection depuis la liste OU marker
     this.fleet.select(eui);
-    // Le follow est forcé à true dans dashboard.html => la carte recentre automatiquement
   }
 
   trackByEui(_: number, d: DeviceSummary) {
     return d.device_eui;
   }
+
 
   fmt(v: any, digits = 0): string {
     const n = Number(v);
@@ -187,5 +197,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
     const s = Math.max(0, Math.round((Date.now() - ms) / 1000));
     return `${s}s`;
   }
+
+
 }
-                                                                                                                                                                            

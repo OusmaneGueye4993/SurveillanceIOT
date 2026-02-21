@@ -14,9 +14,27 @@ export interface TelemetryLatestResponse extends TelemetryPoint {
   device_eui: string;
 }
 
+export interface DevicesListResponse {
+  devices: Array<{
+    device_eui: string;
+    name?: string | null;
+    is_active?: boolean | null;
+    created_at?: string | null;
+  }>;
+}
+
+export interface TelemetryLatestAllItem extends TelemetryPoint {
+  device_eui: string;
+}
+
+export interface TelemetryLatestAllResponse {
+  count: number;
+  items: TelemetryLatestAllItem[];
+}
+
 @Injectable({ providedIn: 'root' })
 export class TelemetryApiService {
-  private base = environment.apiBaseUrl; // ex: http://localhost:8000/api
+  private base = environment.apiBaseUrl; // ex: http://127.0.0.1:8000/api
 
   constructor(private http: HttpClient) {}
 
@@ -38,6 +56,27 @@ export class TelemetryApiService {
       rssi: this.toNum(dto?.rssi),
       snr: this.toNum(dto?.snr),
     };
+  }
+
+  /** Fleet (liste devices) */
+  getDevices(): Observable<DevicesListResponse> {
+    return this.http.get<DevicesListResponse>(`${this.base}/v1/devices/`);
+  }
+
+  /** Fleet (dernier point de chaque device) */
+  getLatestAll(): Observable<TelemetryLatestAllResponse> {
+    return this.http.get<any>(`${this.base}/v1/telemetry/latest/`).pipe(
+      map((res) => {
+        const items = Array.isArray(res?.items) ? res.items : [];
+        return {
+          count: Number(res?.count ?? items.length) || items.length,
+          items: items.map((dto: any) => ({
+            device_eui: String(dto?.device_eui ?? ''),
+            ...this.normalizePoint(dto),
+          })),
+        } as TelemetryLatestAllResponse;
+      })
+    );
   }
 
   getHistory(

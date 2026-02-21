@@ -59,7 +59,7 @@ export class HistoryComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     // (optionnel) si tu veux être sûr que MQTT est connecté
-    this.store.connectMqtt();
+    this.store.startFleetPolling(5000);
 
     this.sub.add(
       combineLatest([this.selected$, this.windowKey$]).pipe(
@@ -79,6 +79,7 @@ export class HistoryComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.sub.unsubscribe();
+    this.store.stopFleetPolling();
   }
 
   setWindow(k: WindowKey) {
