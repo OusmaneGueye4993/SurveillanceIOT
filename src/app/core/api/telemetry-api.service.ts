@@ -10,10 +10,6 @@ export interface TelemetryHistoryResponse {
   history: TelemetryPoint[];
 }
 
-export interface TelemetryLatestResponse extends TelemetryPoint {
-  device_eui: string;
-}
-
 export interface DevicesListResponse {
   devices: Array<{
     device_eui: string;
@@ -34,7 +30,7 @@ export interface TelemetryLatestAllResponse {
 
 @Injectable({ providedIn: 'root' })
 export class TelemetryApiService {
-  private base = environment.apiBaseUrl; // ex: http://127.0.0.1:8000/api
+  private base = String(environment.apiBaseUrl || '').replace(/\/+$/, ''); // ✅ anti /api//...
 
   constructor(private http: HttpClient) {}
 
@@ -45,7 +41,7 @@ export class TelemetryApiService {
 
   private normalizePoint(dto: any): TelemetryPoint {
     let ts = this.toNum(dto?.ts) ?? Math.floor(Date.now() / 1000);
-    if (ts > 1_000_000_000_000) ts = Math.floor(ts / 1000); // ms -> s
+    if (ts > 1_000_000_000_000) ts = Math.floor(ts / 1000);
     return {
       ts,
       lat: this.toNum(dto?.lat) ?? 0,
@@ -57,14 +53,14 @@ export class TelemetryApiService {
     };
   }
 
-  /** GET /api/v1/devices/ */
+  /** ✅ GET /api/v1/me/devices/ */
   getDevices(): Observable<DevicesListResponse> {
-    return this.http.get<DevicesListResponse>(`${this.base}/v1/devices/`);
+    return this.http.get<DevicesListResponse>(`${this.base}/v1/me/devices/`);
   }
 
-  /** GET /api/v1/telemetry/latest/ */
+  /** ✅ GET /api/v1/me/telemetry/latest/ (latest pour les devices du user) */
   getLatestAll(): Observable<TelemetryLatestAllResponse> {
-    return this.http.get<any>(`${this.base}/v1/telemetry/latest/`).pipe(
+    return this.http.get<any>(`${this.base}/v1/me/telemetry/latest/`).pipe(
       map((res) => {
         const items = Array.isArray(res?.items) ? res.items : [];
         return {
@@ -78,19 +74,7 @@ export class TelemetryApiService {
     );
   }
 
-  /** GET /api/v1/telemetry/latest/<device_eui>/ */
-  getLatest(deviceEui: string): Observable<TelemetryLatestResponse> {
-    return this.http
-      .get<any>(`${this.base}/v1/telemetry/latest/${encodeURIComponent(deviceEui)}/`)
-      .pipe(
-        map((dto) => ({
-          device_eui: String(dto?.device_eui ?? deviceEui),
-          ...this.normalizePoint(dto),
-        }))
-      );
-  }
-
-  /** GET /api/v1/telemetry/history/<device_eui>/?limit&fromTs&toTs */
+  /** ✅ GET /api/v1/me/telemetry/history/<device_eui>/ */
   getHistory(
     deviceEui: string,
     opts?: { limit?: number; fromTs?: number; toTs?: number }
@@ -102,7 +86,7 @@ export class TelemetryApiService {
 
     return this.http
       .get<TelemetryHistoryResponse>(
-        `${this.base}/v1/telemetry/history/${encodeURIComponent(deviceEui)}/`,
+        `${this.base}/v1/me/telemetry/history/${encodeURIComponent(deviceEui)}/`,
         { params }
       )
       .pipe(
@@ -113,10 +97,5 @@ export class TelemetryApiService {
             : [],
         }))
       );
-  }
-
-  /** POST /api/v1/telemetry/ingest/ */
-  ingest(payload: any): Observable<any> {
-    return this.http.post(`${this.base}/v1/telemetry/ingest/`, payload);
   }
 }

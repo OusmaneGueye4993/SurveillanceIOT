@@ -10,6 +10,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 
 import { AuthService } from '../../core/auth/auth.service';
+import { DeviceService } from '../../core/devices/device.service';
 
 @Component({
   selector: 'app-login',
@@ -34,7 +35,12 @@ export class LoginComponent {
 
   form: FormGroup;
 
-  constructor(private fb: FormBuilder, private auth: AuthService, private router: Router) {
+  constructor(
+    private fb: FormBuilder,
+    private auth: AuthService,
+    private devicesApi: DeviceService,
+    private router: Router
+  ) {
     this.form = this.fb.group({
       email: ['', [Validators.required, Validators.email]],
       password: ['', [Validators.required]],
@@ -53,8 +59,30 @@ export class LoginComponent {
     this.loading = true;
     this.auth.login(email, password).subscribe({
       next: () => {
-        this.loading = false;
-        this.router.navigateByUrl('/dashboard');
+        // ✅ onboarding multi-user
+        this.devicesApi.listMyDevices().subscribe({
+          next: (list) => {
+            this.loading = false;
+            const devices = list || [];
+            const hasAny = devices.length > 0;
+            const hasActive = devices.some((d) => !!d.is_active);
+
+            if (!hasAny) {
+              this.router.navigateByUrl('/devices');
+              return;
+            }
+            if (!hasActive) {
+              this.router.navigateByUrl('/devices');
+              return;
+            }
+            this.router.navigateByUrl('/dashboard');
+          },
+          error: () => {
+            // fallback : si devices échoue, va dashboard
+            this.loading = false;
+            this.router.navigateByUrl('/dashboard');
+          },
+        });
       },
       error: (e) => {
         this.loading = false;

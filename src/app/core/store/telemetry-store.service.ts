@@ -86,6 +86,21 @@ export class TelemetryStoreService implements OnDestroy {
   }
 
   refreshFleetOnce(): void {
+
+    // 4) Auto-select si rien de choisi (priorité: device actif backend/local)
+if (!this.selectedSubject.value) {
+  const list = Array.from(this.devicesMap.values());
+
+  // priorité au flag isActive (backend)
+  const backendActive = list.find((x) => x.isActive)?.device_eui;
+
+  // sinon premier online, sinon premier tout court
+  const firstActive = list.find((x) => x.active)?.device_eui;
+  const firstAny = list[0]?.device_eui ?? null;
+
+  this.selectedSubject.next(backendActive ?? firstActive ?? firstAny);
+}
+
     forkJoin({
       devicesRes: this.api.getDevices().pipe(
         catchError((err) => {

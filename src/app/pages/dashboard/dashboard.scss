@@ -249,7 +249,7 @@
   border-top: 1px solid rgba(0, 0, 0, 0.06);
 }
 
-/* ===== KPI / Grid (si déjà existant) ===== */
+/* ===== KPI / Grid ===== */
 .grid {
   display: grid;
   grid-template-columns: repeat(12, 1fr);
@@ -331,4 +331,56 @@
 
 .hint {
   opacity: 0.75;
+}
+
+/* =========================
+   ✅ Onboarding (no devices)
+   ========================= */
+.onboardWrap {
+  display: grid;
+  gap: 14px;
+}
+
+.onboardHero {
+  border-radius: 18px;
+  padding: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  overflow: hidden;
+  background: linear-gradient(135deg, rgba(25, 118, 210, 0.10), rgba(156, 39, 176, 0.08));
+  border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.heroLeft {
+  display: grid;
+  gap: 6px;
+  min-width: 240px;
+}
+
+.heroTitle {
+  font-weight: 950;
+  font-size: 18px;
+  letter-spacing: 0.2px;
+}
+
+.heroSub {
+  opacity: 0.82;
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.mutedInline {
+  opacity: 0.75;
+  margin-left: 6px;
+}
+
+.heroRight button {
+  border-radius: 999px;
+  padding: 0 16px;
+}
+
+.embeddedDevices {
+  border-radius: 18px;
 }

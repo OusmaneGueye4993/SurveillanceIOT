@@ -1,52 +1,72 @@
-<div class="loginPage">
-  <mat-card class="loginCard">
+<div class="authPage">
+  <mat-card class="authCard">
+    <div class="cardGlow"></div>
+
     <div class="brand">
       <div class="logo">IoT</div>
-      <div>
+      <div class="txt">
         <div class="title">Créer un compte</div>
-        <div class="sub">Inscris-toi pour gérer ta flotte</div>
+        <div class="sub">Active ton espace et ajoute tes appareils</div>
       </div>
     </div>
 
-    <form [formGroup]="form" (ngSubmit)="submit()">
+    <form [formGroup]="form" (ngSubmit)="submit()" class="form">
       <mat-form-field appearance="outline" class="full">
         <mat-label>Email</mat-label>
-        <input matInput formControlName="email" autocomplete="email" />
+        <mat-icon matPrefix>alternate_email</mat-icon>
+        <input matInput formControlName="email" autocomplete="email" placeholder="ex: user@iot.com" />
         <mat-error *ngIf="form.get('email')?.touched && form.get('email')?.hasError('required')">
-          Champ obligatoire
+          Email obligatoire
         </mat-error>
         <mat-error *ngIf="form.get('email')?.touched && form.get('email')?.hasError('email')">
-          Email invalide
+          Format email invalide
         </mat-error>
       </mat-form-field>
 
       <mat-form-field appearance="outline" class="full">
         <mat-label>Mot de passe</mat-label>
+        <mat-icon matPrefix>lock</mat-icon>
         <input
           matInput
           [type]="hide ? 'password' : 'text'"
           formControlName="password"
           autocomplete="new-password"
+          placeholder="Minimum 8 caractères"
         />
-        <button type="button" mat-icon-button matSuffix (click)="hide = !hide">
+        <button type="button" mat-icon-button matSuffix (click)="hide = !hide" aria-label="Afficher le mot de passe">
           <mat-icon>{{ hide ? 'visibility' : 'visibility_off' }}</mat-icon>
         </button>
+
         <mat-error *ngIf="form.get('password')?.touched && form.get('password')?.invalid">
-          Minimum 8 caractères
+          Mot de passe trop faible
         </mat-error>
       </mat-form-field>
 
-      <div class="error" *ngIf="error">{{ error }}</div>
+      <div class="errorBox" *ngIf="error">
+        <mat-icon>error_outline</mat-icon>
+        <div class="errText">{{ error }}</div>
+      </div>
 
-      <button mat-raised-button class="btn" type="submit" [disabled]="loading">
-        {{ loading ? 'Création…' : 'Créer mon compte' }}
+      <button mat-raised-button class="primaryBtn" type="submit" [disabled]="loading">
+        <mat-icon>person_add</mat-icon>
+        <span>{{ loading ? 'Création…' : 'Créer mon compte' }}</span>
       </button>
+
+      <div class="divider">
+        <span class="line"></span>
+        <span class="hint">Déjà inscrit ?</span>
+        <span class="line"></span>
+      </div>
+
+      <a class="linkBtn" routerLink="/login">
+        Se connecter
+        <mat-icon>arrow_forward</mat-icon>
+      </a>
     </form>
-
-    <div class="hint">
-      Déjà un compte ? <a routerLink="/login"><b>Se connecter</b></a>
-    </div>
-
-    <div class="hint">Backend: <b>/api/v1/auth/register/</b></div>
   </mat-card>
+
+  <div class="footerNote">
+  
+    <span>©  Environment Surveillance • Secure IoT Console</span>
+  </div>
 </div>
