@@ -29,10 +29,10 @@ export class DeviceCreateDialogComponent {
     private fb: FormBuilder,
     private ref: MatDialogRef<DeviceCreateDialogComponent>
   ) {
-    // ✅ init ici (fb déjà injecté)
     this.form = this.fb.group({
       name: [''],
       device_eui: ['', [Validators.required, Validators.pattern(/^[0-9A-Fa-f]{16}$/)]],
+      claim_code: ['', [Validators.pattern(/^[0-9A-Za-z]{6,32}$/)]], // ✅ claim code (6..32)
       description: [''],
     });
   }
@@ -51,6 +51,7 @@ export class DeviceCreateDialogComponent {
     this.ref.close({
       name: (v.name || '').trim(),
       device_eui: String(v.device_eui || '').trim().toUpperCase(),
+      claim_code: String(v.claim_code || '').trim().toUpperCase(),
       description: (v.description || '').trim(),
     });
   }

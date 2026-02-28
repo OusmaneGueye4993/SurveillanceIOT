@@ -50,23 +50,35 @@ export class FleetMapComponent implements AfterViewInit, OnChanges, OnDestroy {
   private markers = new Map<string, L.Marker>();
 
   private initialized = false;
-
-  // pour éviter de refaire fitBounds en boucle inutilement
   private lastTrackKey = '';
+
+  private resizeObserver?: ResizeObserver;
 
   constructor(private zone: NgZone) {}
 
   ngAfterViewInit(): void {
     this.initMapOnce();
+
+    // ✅ Important : quand le composant s’affiche après navigation,
+    // Leaflet peut calculer une taille 0 -> invalidateSize pour stabiliser
+    this.deferInvalidate();
+
+    // ✅ observe resize du conteneur (sidenav, responsive, etc.)
+    this.setupResizeObserver();
+
     this.renderAll();
   }
 
   ngOnChanges(_: SimpleChanges): void {
     if (!this.initialized) return;
     this.renderAll();
+    this.deferInvalidate();
   }
 
   ngOnDestroy(): void {
+    try {
+      this.resizeObserver?.disconnect();
+    } catch {}
     if (this.map) this.map.remove();
   }
 
@@ -93,13 +105,26 @@ export class FleetMapComponent implements AfterViewInit, OnChanges, OnDestroy {
     });
   }
 
+  private setupResizeObserver(): void {
+    if (typeof ResizeObserver === 'undefined') return;
+    this.resizeObserver = new ResizeObserver(() => this.deferInvalidate());
+    this.resizeObserver.observe(this.mapEl.nativeElement);
+  }
+
+  private deferInvalidate(): void {
+    if (!this.map) return;
+
+    this.zone.runOutsideAngular(() => {
+      // double-tick = plus fiable quand Angular rend le layout (sidenav etc.)
+      setTimeout(() => this.map.invalidateSize({ pan: false }), 0);
+      setTimeout(() => this.map.invalidateSize({ pan: false }), 150);
+    });
+  }
+
   private renderAll(): void {
     this.updateMarkers();
     const trackBounds = this.updateHistoryTrack();
 
-    // ✅ follow pro:
-    // - si trajectoire: fitBounds sur le trajet
-    // - sinon: flyToSelected sur le marker
     if (this.follow && this.selected) {
       if (trackBounds) this.fitToBounds(trackBounds);
       else this.flyToSelected();
@@ -107,9 +132,8 @@ export class FleetMapComponent implements AfterViewInit, OnChanges, OnDestroy {
   }
 
   private updateMarkers(): void {
-    const nextKeys = new Set(this.devices.map((d) => d.device_eui));
+    const nextKeys = new Set(this.devices.map((d) => String(d?.device_eui || '').toUpperCase()));
 
-    // remove old
     for (const [eui, marker] of this.markers.entries()) {
       if (!nextKeys.has(eui)) {
         marker.remove();
@@ -117,40 +141,35 @@ export class FleetMapComponent implements AfterViewInit, OnChanges, OnDestroy {
       }
     }
 
-    // add/update
-    for (const d of this.devices) {
-      const lat = Number(d?.last?.lat);
-      const lng = Number(d?.last?.lng);
+    for (const raw of this.devices) {
+      const eui = String(raw?.device_eui || '').toUpperCase();
+      if (!eui) continue;
+
+      const lat = Number(raw?.last?.lat);
+      const lng = Number(raw?.last?.lng);
       if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
 
       const latlng: L.LatLngExpression = [lat, lng];
-      const isSel = d.device_eui === this.selected;
+      const isSel = eui === (this.selected || '').toUpperCase();
+      const active = !!raw?.active;
 
-      if (!this.markers.has(d.device_eui)) {
+      if (!this.markers.has(eui)) {
         const m = L.marker(latlng, {
-          icon: this.makeDotIcon(d.active ? 'active' : 'inactive', isSel),
+          icon: this.makeDotIcon(active ? 'active' : 'inactive', isSel),
           keyboard: false,
         });
 
-        m.on('click', () => this.zone.run(() => this.selectDevice.emit(d.device_eui)));
+        m.on('click', () => this.zone.run(() => this.selectDevice.emit(eui)));
         m.addTo(this.markerLayer);
-        this.markers.set(d.device_eui, m);
+        this.markers.set(eui, m);
       } else {
-        const m = this.markers.get(d.device_eui)!;
+        const m = this.markers.get(eui)!;
         m.setLatLng(latlng);
-        m.setIcon(this.makeDotIcon(d.active ? 'active' : 'inactive', isSel));
+        m.setIcon(this.makeDotIcon(active ? 'active' : 'inactive', isSel));
       }
     }
   }
 
-  /**
-   * Dessine une trajectoire "pro" :
-   * - polyline arrondie + smoothFactor
-   * - START (S) + END (E)
-   * - marker last point (halo)
-   *
-   * Retourne bounds si trajectoire valide (pour fitBounds)
-   */
   private updateHistoryTrack(): L.LatLngBounds | null {
     this.trackLayer.clearLayers();
 
@@ -158,7 +177,6 @@ export class FleetMapComponent implements AfterViewInit, OnChanges, OnDestroy {
     if (!this.selected) return null;
     if (!this.history || this.history.length < 2) return null;
 
-    // Nettoyage + dé-duplication simple (évite points identiques consécutifs)
     const pts: [number, number][] = [];
     let prev: [number, number] | null = null;
 
@@ -176,14 +194,10 @@ export class FleetMapComponent implements AfterViewInit, OnChanges, OnDestroy {
 
     if (pts.length < 2) return null;
 
-    // Key (pour éviter fitBounds trop fréquent si rien ne change)
     const first = pts[0];
     const last = pts[pts.length - 1];
-    const trackKey = `${this.selected}|${pts.length}|${first[0].toFixed(6)},${first[1].toFixed(
-      6
-    )}|${last[0].toFixed(6)},${last[1].toFixed(6)}`;
+    const trackKey = `${this.selected}|${pts.length}|${first[0].toFixed(6)},${first[1].toFixed(6)}|${last[0].toFixed(6)},${last[1].toFixed(6)}`;
 
-    // Polyline pro
     const line = L.polyline(pts, {
       className: 'track-line',
       weight: 5,
@@ -192,9 +206,9 @@ export class FleetMapComponent implements AfterViewInit, OnChanges, OnDestroy {
       lineJoin: 'round',
       smoothFactor: 1.2,
     });
+
     line.addTo(this.trackLayer);
 
-    // Start / End markers
     L.marker(pts[0], { icon: this.makeEndpointIcon('start'), keyboard: false })
       .addTo(this.trackLayer)
       .bindTooltip('Départ', { direction: 'top', offset: [0, -10], opacity: 0.9 });
@@ -203,19 +217,16 @@ export class FleetMapComponent implements AfterViewInit, OnChanges, OnDestroy {
       .addTo(this.trackLayer)
       .bindTooltip('Dernier point', { direction: 'top', offset: [0, -10], opacity: 0.9 });
 
-    // halo "last point" (plus visible)
     L.marker(last, { icon: this.makeLastPointIcon(), keyboard: false }).addTo(this.trackLayer);
 
     const bounds = line.getBounds();
 
-    // mémorise pour follow/fitBounds plus stable
     if (trackKey !== this.lastTrackKey) this.lastTrackKey = trackKey;
 
     return bounds.isValid() ? bounds : null;
   }
 
   private fitToBounds(bounds: L.LatLngBounds): void {
-    // padding pour UI + éviter trop de zoom
     this.map.fitBounds(bounds, {
       padding: [60, 60],
       maxZoom: 16,
@@ -225,7 +236,8 @@ export class FleetMapComponent implements AfterViewInit, OnChanges, OnDestroy {
   }
 
   private flyToSelected(): void {
-    const m = this.markers.get(this.selected!);
+    const key = (this.selected || '').toUpperCase();
+    const m = this.markers.get(key);
     if (!m) return;
     const ll = m.getLatLng();
     this.map.flyTo(ll, Math.max(this.map.getZoom(), 14), { duration: 0.8 });
@@ -274,6 +286,7 @@ export class FleetMapComponent implements AfterViewInit, OnChanges, OnDestroy {
     const bg = kind === 'start' ? '#2e7d32' : '#1976d2';
     const label = kind === 'start' ? 'S' : 'E';
 
+    // ✅ FIX : HTML correctement fermé (sinon markers invisibles aléatoirement)
     const html = `
       <div class="endpoint-badge" style="
         width:22px;height:22px;border-radius:50%;
@@ -282,6 +295,7 @@ export class FleetMapComponent implements AfterViewInit, OnChanges, OnDestroy {
         box-shadow:0 6px 14px rgba(0,0,0,0.22);
         display:flex;align-items:center;justify-content:center;
         color:#fff;
+        font:700 12px/18px system-ui, -apple-system, Segoe UI, Roboto, Arial;
       ">${label}</div>
     `;
 

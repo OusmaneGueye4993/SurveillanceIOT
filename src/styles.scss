@@ -1,40 +1,119 @@
+/* =========================================================
+   MAURIOT – GLOBAL THEME (Warm Sand + Deep Green)
+   ========================================================= */
 
-// Include theming for Angular Material with `mat.theme()`.
-// This Sass mixin will define CSS variables that are used for styling Angular Material
-// components according to the Material 3 design spec.
-// Learn more about theming and how to use it for your application's
-// custom components at https://material.angular.dev/guide/theming
-@use '@angular/material' as mat;
-@import "leaflet/dist/leaflet.css";
-@import "leaflet/dist/leaflet.css";
+/* Tokens (design system) */
+:root {
+  /* Backgrounds */
+  --bg-main: #f6f1e7;     /* ivoire chaud */
+  --bg-soft: #fbf7f0;     /* ivoire plus clair */
+  --surface: #ffffff;     /* cartes */
+  --surface-2: rgba(255, 255, 255, 0.78);
 
-html {
+  /* Text */
+  --text: #1f2937;        /* gris très foncé */
+  --muted: #6b7280;       /* gris */
+  --muted-2: rgba(31, 41, 55, 0.55);
+
+  /* Brand (Green) */
+  --primary: #1f6f4a;
+  --primary-600: #185a3c;
+  --primary-700: #12462f;
+  --primary-100: #d9f0e6;
+
+  /* Borders */
+  --border: #e7ded0;
+  --border-2: rgba(18, 70, 47, 0.14);
+
+  /* Focus */
+  --ring: rgba(110, 214, 166, 0.55);
+
+  /* Radius */
+  --r-xl: 22px;
+  --r-lg: 18px;
+  --r-md: 14px;
+  --r-sm: 10px;
+
+  /* Shadows */
+  --shadow-sm: 0 10px 24px rgba(0, 0, 0, 0.08);
+  --shadow-md: 0 20px 55px rgba(0, 0, 0, 0.10);
+  --shadow-brand: 0 18px 35px rgba(31, 111, 74, 0.18);
+
+  /* Spacing */
+  --pad: 14px;
+}
+
+/* Base */
+html,
+body {
   height: 100%;
-  @include mat.theme((
-    color: (
-      primary: mat.$azure-palette,
-      tertiary: mat.$blue-palette,
-    ),
-    typography: Roboto,
-    density: 0,
-  ));
 }
 
 body {
-  // Default the application to a light color theme. This can be changed to
-  // `dark` to enable the dark color theme, or to `light dark` to defer to the
-  // user's system settings.
-  color-scheme: light;
-
-  // Set a default background, font and text colors for the application using
-  // Angular Material's system-level CSS variables. Learn more about these
-  // variables at https://material.angular.dev/guide/system-variables
-  background-color: var(--mat-sys-surface);
-  color: var(--mat-sys-on-surface);
-  font: var(--mat-sys-body-medium);
-
-  // Reset the user agent margin.
   margin: 0;
-  height: 100%;
+  color: var(--text);
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+
+  /* Fond global harmonisé (comme login) */
+  background:
+    radial-gradient(1100px 680px at 40% -10%, rgba(31, 111, 74, 0.14), transparent 60%),
+    linear-gradient(180deg, var(--bg-main), #efe6d6);
 }
-/* You can add global styles to this file, and also import other style files */
+
+/* Links */
+a {
+  color: inherit;
+}
+
+/* Focus visible */
+:focus-visible {
+  outline: 3px solid var(--ring);
+  outline-offset: 2px;
+  border-radius: 10px;
+}
+
+/* =========================================================
+   Angular Material soft theming (sans changer ta logique)
+   ========================================================= */
+
+/* Cards */
+.mat-mdc-card {
+  background: var(--surface) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--r-lg) !important;
+  box-shadow: var(--shadow-sm) !important;
+}
+
+/* Buttons */
+.mat-mdc-raised-button,
+.mat-mdc-unelevated-button,
+.mat-mdc-outlined-button,
+.mat-mdc-button {
+  border-radius: var(--r-md) !important;
+  font-weight: 800 !important;
+}
+
+/* Primary filled buttons */
+.mat-mdc-raised-button.mat-primary,
+.mat-mdc-unelevated-button.mat-primary {
+  background: linear-gradient(180deg, var(--primary), var(--primary-600)) !important;
+  color: #fff !important;
+  box-shadow: var(--shadow-brand) !important;
+}
+
+/* Outlined button */
+.mat-mdc-outlined-button {
+  border-color: rgba(31, 111, 74, 0.26) !important;
+}
+
+/* Inputs / form fields */
+.mat-mdc-form-field {
+  --mdc-filled-text-field-container-shape: var(--r-md);
+  --mdc-outlined-text-field-container-shape: var(--r-md);
+}
+
+/* Typography small tweaks */
+.mat-mdc-card-title {
+  font-weight: 900 !important;
+  letter-spacing: -0.02em;
+}

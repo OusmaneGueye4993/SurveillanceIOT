@@ -14,12 +14,11 @@ import { HistoryComponent } from './pages/history/history';
 import { SettingsComponent } from './pages/settings/settings';
 
 export const routes: Routes = [
-
-  // 🔓 Routes publiques
+  // 🔓 Public
   { path: 'login', component: LoginComponent, canActivate: [publicOnlyGuard] },
   { path: 'register', component: RegisterComponent, canActivate: [publicOnlyGuard] },
 
-  // 🔐 Routes protégées
+  // 🔐 Protected
   {
     path: '',
     component: ShellComponent,
@@ -32,12 +31,14 @@ export const routes: Routes = [
       { path: 'alerts', component: AlertsComponent },
       { path: 'history', component: HistoryComponent },
       { path: 'settings', component: SettingsComponent },
-      {path: 'devices',
-  loadComponent: () => import('../app/core/devices/devices').then(m => m.DevicesComponent),}
-
+      {
+        path: 'devices',
+        loadComponent: () =>
+          import('./core/devices/devices').then((m) => m.DevicesComponent),
+      },
     ],
   },
 
-  // 🌍 Toute URL inconnue → login
-  { path: '**', redirectTo: 'login' },
+  // ✅ Wildcard plus neutre : revient vers root (guard décidera login/dashboard)
+  { path: '**', redirectTo: '' },
 ];

@@ -27,15 +27,12 @@ export class AuthService {
   private loggedInSubject = new BehaviorSubject<boolean>(this.hasAccessToken());
   isLoggedIn$ = this.loggedInSubject.asObservable();
 
-  // ✅ User state (pour afficher email/username dans le header)
+  // ✅ User state
   private userSubject = new BehaviorSubject<JwtPayload | null>(this.getUserFromToken());
   user$ = this.userSubject.asObservable();
 
   constructor(private http: HttpClient) {}
 
-  // -------------------------
-  // Tokens helpers
-  // -------------------------
   private hasAccessToken(): boolean {
     return !!localStorage.getItem(ACCESS_KEY);
   }
@@ -52,7 +49,7 @@ export class AuthService {
     localStorage.setItem(ACCESS_KEY, tokens.access);
     localStorage.setItem(REFRESH_KEY, tokens.refresh);
     this.loggedInSubject.next(true);
-    this.refreshUserFromToken(); // ✅ important
+    this.refreshUserFromToken();
   }
 
   private clearTokens(): void {
@@ -62,15 +59,11 @@ export class AuthService {
     this.userSubject.next(null);
   }
 
-  // -------------------------
-  // JWT decode helpers
-  // -------------------------
   private decodeJwtPayload(token: string): JwtPayload | null {
     try {
       const parts = token.split('.');
       if (parts.length < 2) return null;
 
-      // Base64Url -> Base64
       const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
       const padded = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), '=');
 
@@ -87,16 +80,11 @@ export class AuthService {
     return this.decodeJwtPayload(token);
   }
 
-  /** À appeler après login/refresh/reload si tu veux forcer un refresh du user affiché */
   refreshUserFromToken(): void {
     this.userSubject.next(this.getUserFromToken());
   }
 
-  // -------------------------
-  // API calls
-  // -------------------------
-
-  /** ✅ LOGIN = email + password (backend attend username/password, donc username=email) */
+  /** ✅ LOGIN: backend attend username/password, donc username=email */
   login(email: string, password: string): Observable<Tokens> {
     const username = String(email || '').trim().toLowerCase();
     return this.http
@@ -113,7 +101,7 @@ export class AuthService {
       tap((res) => {
         localStorage.setItem(ACCESS_KEY, res.access);
         this.loggedInSubject.next(true);
-        this.refreshUserFromToken(); // ✅ important
+        this.refreshUserFromToken();
       })
     );
   }
@@ -122,7 +110,7 @@ export class AuthService {
     this.clearTokens();
   }
 
-  /** ✅ REGISTER = email + password (on met username=email) */
+  /** ✅ REGISTER: username=email */
   register(email: string, password: string): Observable<{ id: number; username: string }> {
     const cleanEmail = String(email || '').trim().toLowerCase();
     return this.http.post<{ id: number; username: string }>(`${this.base}/v1/auth/register/`, {
@@ -136,11 +124,6 @@ export class AuthService {
     return this.register(email, password).pipe(switchMap(() => this.login(email, password)));
   }
 
-  // -------------------------
-  // UI helper
-  // -------------------------
-
-  /** Pour ton header : renvoie email sinon username sinon "Utilisateur" */
   getDisplayName(snapshot?: JwtPayload | null): string {
     const u = snapshot ?? this.userSubject.value;
     return (u?.email || u?.username || 'Utilisateur').toString();

@@ -37,7 +37,7 @@
       <button
         mat-stroked-button
         (click)="clearHistory()"
-        [disabled]="!history || history.length === 0"
+        [disabled]="history.length === 0"
       >
         Effacer trajet
       </button>
@@ -61,7 +61,7 @@
             class="map"
             [devices]="devices"
             [selected]="(selected$ | async) ?? null"
-            [history]="history ?? null"
+            [history]="history"
             [follow]="follow"
             [showHistory]="showHistory"
             (selectDevice)="onSelect($event)"
@@ -85,7 +85,7 @@
           </span>
 
           <span class="pill" *ngIf="!loadingHistory && !historyError">
-            Points: <b>{{ history?.length ?? 0 }}</b>
+            Points: <b>{{ history.length }}</b>
           </span>
 
           <span
@@ -126,14 +126,18 @@
               role="button"
               tabindex="0"
             >
-              <span class="dot" [class.active]="d.active" [class.inactive]="!d.active"></span>
+              <span
+                class="dot"
+                [class.active]="d.active"
+                [class.inactive]="!d.active"
+              ></span>
 
               <div class="main">
                 <div class="eui">{{ d.device_eui }}</div>
                 <div class="meta">
-                  Bat: <b>{{ d.battery ?? '—' }}</b>% •
-                  RSSI: <b>{{ d.rssi ?? '—' }}</b> •
-                  vu il y a <b>{{ secondsAgoTs(d.lastTs) }}</b>
+                  Bat: <b>{{ d.battery ?? '—' }}</b>% • RSSI:
+                  <b>{{ d.rssi ?? '—' }}</b> • vu il y a
+                  <b>{{ secondsAgoTs(d.lastTs) }}</b>
                 </div>
               </div>
 

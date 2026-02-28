@@ -27,6 +27,18 @@
       </mat-error>
     </mat-form-field>
 
+    <!-- ✅ NEW: Claim Code -->
+    <mat-form-field appearance="outline" class="full">
+      <mat-label>Code d’association (Claim Code)</mat-label>
+      <mat-icon matPrefix>vpn_key</mat-icon>
+      <input matInput formControlName="claim_code" placeholder="Ex: A1B2C3D4" />
+      <mat-hint>Code fourni par le device (6 à 32 caractères)</mat-hint>
+
+      <mat-error *ngIf="form.get('claim_code')?.touched && form.get('claim_code')?.hasError('pattern')">
+        Format invalide (6 à 32 caractères alphanumériques)
+      </mat-error>
+    </mat-form-field>
+
     <mat-form-field appearance="outline" class="full">
       <mat-label>Description (optionnel)</mat-label>
       <mat-icon matPrefix>notes</mat-icon>

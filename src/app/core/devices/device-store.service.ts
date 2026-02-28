@@ -55,55 +55,57 @@ export class DeviceStoreService {
   }
 
   /** ✅ Nouveau: ajout + refresh + auto-active si besoin */
-  addDevice(payload: { device_eui: string; name?: string; description?: string }, opts?: AddOptions): Observable<void> {
-    this.loadingSubject.next(true);
-    this.errorSubject.next(null);
+addDevice(
+  payload: { device_eui: string; name?: string; description?: string; claim_code?: string },
+  opts?: { autoSetActiveIfNone?: boolean }
+) {
+  this.loadingSubject.next(true);
+  this.errorSubject.next(null);
 
-    const before = this.getSnapshot();
-    const hadActiveBefore = before.some((d) => !!d.is_active);
+  const before = this.getSnapshot();
+  const hadActiveBefore = before.some((d) => !!d.is_active);
 
-    const body = {
-      ...payload,
-      device_eui: String(payload.device_eui || '').trim().toUpperCase(),
-      name: (payload.name || '').trim(),
-      description: (payload.description || '').trim(),
-    };
+  const body = {
+    ...payload,
+    device_eui: String(payload.device_eui || '').trim().toUpperCase(),
+    name: (payload.name || '').trim(),
+    description: (payload.description || '').trim(),
+    claim_code: String(payload.claim_code || '').trim().toUpperCase(),
+  };
 
-    return this.api.addMyDevice(body).pipe(
-      switchMap((created) => {
-        const createdEui = String(created?.device_eui || body.device_eui).toUpperCase();
+  return this.api.addMyDevice(body).pipe(
+    switchMap((created) => {
+      const createdEui = String(created?.device_eui || body.device_eui).toUpperCase();
 
-        // Option pro: si aucun actif avant, on set actif automatiquement
-        if (opts?.autoSetActiveIfNone && !hadActiveBefore) {
-          return this.api.setActive(createdEui).pipe(map(() => createdEui));
-        }
-        return of(createdEui);
-      }),
-      switchMap(() => this.api.listMyDevices()),
-      map((devices) =>
-        (devices || []).map((d) => ({
-          ...d,
-          device_eui: String(d.device_eui || '').toUpperCase(),
-        }))
-      ),
-      tap((normalized) => {
-        this.devicesSubject.next(normalized);
-        this.active.syncFromDevices(normalized);
-      }),
-      map(() => void 0),
-      finalize(() => this.loadingSubject.next(false)),
-      catchError((e) => {
-        const msg =
-          e?.error?.detail ||
-          e?.error?.device_eui?.[0] ||
-          e?.error?.name?.[0] ||
-          e?.error?.email?.[0] ||
-          'Ajout impossible.';
-        this.errorSubject.next(msg);
-        return throwError(() => e);
-      })
-    );
-  }
+      if (opts?.autoSetActiveIfNone && !hadActiveBefore) {
+        return this.api.setActive(createdEui).pipe(map(() => createdEui));
+      }
+      return of(createdEui);
+    }),
+    switchMap(() => this.api.listMyDevices()),
+    map((devices) =>
+      (devices || []).map((d) => ({
+        ...d,
+        device_eui: String(d.device_eui || '').toUpperCase(),
+      }))
+    ),
+    tap((normalized) => {
+      this.devicesSubject.next(normalized);
+      this.active.syncFromDevices(normalized);
+    }),
+    map(() => void 0),
+    finalize(() => this.loadingSubject.next(false)),
+    catchError((e) => {
+      const msg =
+        e?.error?.detail ||
+        e?.error?.claim_code?.[0] ||
+        e?.error?.device_eui?.[0] ||
+        'Ajout impossible.';
+      this.errorSubject.next(msg);
+      return throwError(() => e);
+    })
+  );
+}
 
   delete(deviceEui: string): void {
     this.loadingSubject.next(true);

@@ -8,7 +8,6 @@ type ListResponse = Device[] | { devices?: Device[] } | { results?: Device[] };
 
 @Injectable({ providedIn: 'root' })
 export class DeviceService {
-  // ✅ normalise pour éviter /api//v1/...
   private base = String(environment.apiBaseUrl || '').replace(/\/+$/, '');
 
   constructor(private http: HttpClient) {}
@@ -24,15 +23,25 @@ export class DeviceService {
     );
   }
 
-  addMyDevice(payload: { device_eui: string; name?: string; description?: string }): Observable<Device> {
+  addMyDevice(payload: {
+    device_eui: string;
+    name?: string;
+    description?: string;
+    claim_code?: string; // ✅ NEW
+  }): Observable<Device> {
     return this.http.post<Device>(`${this.base}/v1/me/devices/`, payload);
   }
 
   deleteMyDevice(deviceEui: string): Observable<{ status: string }> {
-    return this.http.delete<{ status: string }>(`${this.base}/v1/me/devices/${encodeURIComponent(deviceEui)}/`);
+    return this.http.delete<{ status: string }>(
+      `${this.base}/v1/me/devices/${encodeURIComponent(deviceEui)}/`
+    );
   }
 
   setActive(deviceEui: string): Observable<Device> {
-    return this.http.patch<Device>(`${this.base}/v1/me/devices/${encodeURIComponent(deviceEui)}/active/`, {});
+    return this.http.patch<Device>(
+      `${this.base}/v1/me/devices/${encodeURIComponent(deviceEui)}/active/`,
+      {}
+    );
   }
 }

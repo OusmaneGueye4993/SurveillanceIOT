@@ -1,38 +1,75 @@
-<div class="brand">
-  <div class="logo">DS</div>
-  <div *ngIf="user$ | async as u">
-  {{ u.email || u.username }}
-</div>
-</div>
+<aside class="sb">
+  <div class="sb__brand">
+    <div class="sb__logo">
+      <span class="dot"></span>
+      <span class="text">Mauri<span>IoT</span></span>
+    </div>
+    <div class="sb__hint">Real-time monitoring</div>
+  </div>
 
-<mat-nav-list>
-  <a mat-list-item routerLink="/dashboard" routerLinkActive="active">
-    <mat-icon matListItemIcon>dashboard</mat-icon>
-    <span>Dashboard</span>
-  </a>
+  <div class="sb__card">
+    @if (user$ | async; as u) {
+      <div class="sb__user">
+        <div class="avatar" [ngStyle]="avatarStyle(u?.username)">
+          {{ initials(u?.username) }}
+        </div>
 
-  <a mat-list-item routerLink="/map" routerLinkActive="active">
-    <mat-icon matListItemIcon>map</mat-icon>
-    <span>Carte GPS</span>
-  </a>
+        <div class="meta">
+          <div class="name">{{ u?.username ?? 'Utilisateur' }}</div>
+          <div class="status">
+            <span class="pill ok">
+              <span class="led"></span>
+              Connecté
+            </span>
+          </div>
+        </div>
+      </div>
+    } @else {
+      <div class="sb__user">
+        <div class="avatar ghost">?</div>
 
-  <a mat-list-item routerLink="/telemetry" routerLinkActive="active">
-    <mat-icon matListItemIcon>timeline</mat-icon>
-    <span>Télémétrie</span>
-  </a>
+        <div class="meta">
+          <div class="name">Non connecté</div>
+          <div class="status">
+            <span class="pill off">
+              <span class="led"></span>
+              Hors ligne
+            </span>
+          </div>
+        </div>
+      </div>
+    }
+  </div>
 
-  <a mat-list-item routerLink="/alerts" routerLinkActive="active">
-    <mat-icon matListItemIcon>warning</mat-icon>
-    <span>Alertes</span>
-  </a>
+  <nav class="sb__nav" aria-label="Navigation">
+    @for (item of nav; track item.to) {
+      <a
+        class="sb__item"
+        [routerLink]="item.to"
+        routerLinkActive="active"
+        [routerLinkActiveOptions]="{ exact: item.to === '/dashboard' }"
+        matRipple
+        [matTooltip]="item.label"
+        matTooltipPosition="right"
+      >
+        <mat-icon class="ic">{{ item.icon }}</mat-icon>
+        <span class="label">{{ item.label }}</span>
+        <span class="chev">›</span>
+      </a>
+    }
+  </nav>
 
-  <a mat-list-item routerLink="/history" routerLinkActive="active">
-    <mat-icon matListItemIcon>history</mat-icon>
-    <span>Historique</span>
-  </a>
+  <div class="sb__spacer"></div>
 
-  <a mat-list-item routerLink="/settings" routerLinkActive="active">
-    <mat-icon matListItemIcon>settings</mat-icon>
-    <span>Paramètres</span>
-  </a>
-</mat-nav-list>
+  <div class="sb__footer">
+    <button class="sb__btn" type="button" matRipple (click)="logout()">
+      <mat-icon>logout</mat-icon>
+      Déconnexion
+    </button>
+
+    <div class="sb__mini">
+      <span class="chip">v1.0</span>
+      <span class="chip">LoRaWAN • MQTT</span>
+    </div>
+  </div>
+</aside>

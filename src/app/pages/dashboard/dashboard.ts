@@ -21,7 +21,7 @@ import { TelemetryStoreService } from '../../core/store/telemetry-store.service'
 import { DashboardSettingsService } from '../../core/settings/dashboard-settings.service';
 
 // ✅ ton “/devices” embarqué dans dashboard
-import { DevicesComponent } from '../../core/devices/devices';
+import { DevicesComponent} from '../../core/devices/devices';
 
 // ✅ store multi-user devices
 import { DeviceStoreService } from '../../core/devices/device-store.service';
@@ -54,11 +54,11 @@ type AlertItem = { level: 'critical' | 'warn'; message: string };
     MatTableModule,
 
     FleetMapComponent,
-    MiniMapComponent,
+
     TelemetryChartComponent,
 
     // ✅ pour afficher le contenu /devices dans dashboard quand aucun device
-    DevicesComponent,
+
   ],
   templateUrl: './dashboard.html',
   styleUrls: ['./dashboard.scss'],
