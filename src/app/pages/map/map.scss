@@ -4,12 +4,16 @@
   gap: 14px;
 }
 
-/* Top bar */
+/* ===== Top bar ===== */
 .top {
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
   gap: 12px;
+
+  .titleBlock {
+    min-width: 0;
+  }
 
   h2 {
     margin: 0;
@@ -25,6 +29,10 @@
     display: flex;
     gap: 6px;
     align-items: center;
+
+    .sep {
+      opacity: 0.6;
+    }
   }
 
   .topActions {
@@ -41,7 +49,21 @@
   }
 }
 
-/* MAP */
+/* ===== Layout ===== */
+.grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+}
+
+@media (min-width: 1100px) {
+  .grid {
+    grid-template-columns: 1.65fr 1fr;
+    align-items: start;
+  }
+}
+
+/* ===== MAP ===== */
 .mapCard {
   border-radius: 18px;
   overflow: hidden;
@@ -51,12 +73,21 @@
   padding: 0 !important;
 }
 
-:host ::ng-deep app-fleet-map.map {
+/* Important: le composant doit avoir une hauteur fixe */
+app-fleet-map.map {
   display: block;
   width: 100%;
   height: 520px;
 }
 
+/* Si tu as un conteneur interne leaflet, cette règle aide aussi */
+:host ::ng-deep .leaflet-container {
+  width: 100%;
+  height: 100%;
+  border-radius: 14px;
+}
+
+/* Footer */
 .mapFooter {
   display: flex;
   justify-content: space-between;
@@ -109,10 +140,15 @@
       background: rgba(198, 40, 40, 0.12);
       color: #c62828;
     }
+
+    &.warn {
+      background: rgba(255, 152, 0, 0.15);
+      color: #7a4f00;
+    }
   }
 }
 
-/* LISTE */
+/* ===== LISTE ===== */
 .panel {
   border-radius: 18px;
 }
@@ -126,6 +162,7 @@
   &:hover {
     background: rgba(0, 0, 0, 0.04);
   }
+
   &.selected {
     background: rgba(33, 150, 243, 0.14);
   }
@@ -139,6 +176,7 @@
     &.active {
       background: #2e7d32;
     }
+
     &.inactive {
       background: #c62828;
     }
@@ -148,10 +186,12 @@
     flex: 1;
     min-width: 0;
   }
+
   .eui {
     font-weight: 850;
     font-size: 13px;
   }
+
   .meta {
     font-size: 12px;
     opacity: 0.7;
@@ -168,6 +208,7 @@
       background: rgba(46, 125, 50, 0.15);
       color: #2e7d32;
     }
+
     &.off {
       background: rgba(198, 40, 40, 0.15);
       color: #c62828;
@@ -183,7 +224,7 @@
 
 /* Mobile */
 @media (max-width: 768px) {
-  :host ::ng-deep app-fleet-map.map {
+  app-fleet-map.map {
     height: 420px;
   }
 }

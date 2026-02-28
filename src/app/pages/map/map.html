@@ -51,107 +51,111 @@
     </div>
   </div>
 
-  <mat-card class="mapCard">
-    <mat-card-title>Carte</mat-card-title>
+  <div class="grid">
+    <!-- MAP -->
+    <mat-card class="mapCard">
+      <mat-card-title>Carte</mat-card-title>
 
-    <mat-card-content class="mapWrap">
-      <ng-container *ngIf="(filtered$ | async) as devices; else loadingDevices">
-        <ng-container *ngIf="devices.length > 0; else emptyDevices">
-          <app-fleet-map
-            class="map"
-            [devices]="devices"
-            [selected]="(selected$ | async) ?? null"
-            [history]="history"
-            [follow]="follow"
-            [showHistory]="showHistory"
-            (selectDevice)="onSelect($event)"
-          >
-          </app-fleet-map>
-        </ng-container>
-      </ng-container>
-
-      <div class="mapFooter">
-        <div class="legend">
-          <span><span class="lgDot ok"></span> Actif</span>
-          <span><span class="lgDot off"></span> Inactif</span>
-          <span><span class="lgDot last"></span> Dernier point</span>
-        </div>
-
-        <div class="histState">
-          <span class="pill" *ngIf="loadingHistory">Chargement…</span>
-
-          <span class="pill off" *ngIf="!loadingHistory && historyError">
-            {{ historyError }}
-          </span>
-
-          <span class="pill" *ngIf="!loadingHistory && !historyError">
-            Points: <b>{{ history.length }}</b>
-          </span>
-
-          <span
-            class="pill warn"
-            *ngIf="!loadingHistory && !historyError && history.length === 0 && (selected$ | async)"
-          >
-            Aucun point dans cette fenêtre
-          </span>
-        </div>
-      </div>
-
-      <ng-template #loadingDevices>
-        <div class="empty">Chargement des équipements…</div>
-      </ng-template>
-
-      <ng-template #emptyDevices>
-        <div class="empty">Aucun équipement reçu.</div>
-      </ng-template>
-    </mat-card-content>
-  </mat-card>
-
-  <mat-card class="panel">
-    <mat-card-title>
-      Équipements
-      <span class="count" *ngIf="(filtered$ | async) as d">({{ d.length }})</span>
-    </mat-card-title>
-
-    <mat-card-content>
-      <ng-container *ngIf="(filtered$ | async) as devices">
-        <mat-nav-list *ngIf="devices.length > 0; else emptyState">
-          <ng-container *ngIf="(selected$ | async) as selected">
-            <a
-              mat-list-item
-              class="equip-item"
-              *ngFor="let d of devices"
-              (click)="onSelect(d.device_eui)"
-              [class.selected]="d.device_eui === selected"
-              role="button"
-              tabindex="0"
+      <mat-card-content class="mapWrap">
+        <ng-container *ngIf="(filtered$ | async) as devices; else loadingDevices">
+          <ng-container *ngIf="devices.length > 0; else emptyDevices">
+            <app-fleet-map
+              class="map"
+              [devices]="devices"
+              [selected]="(selected$ | async) ?? null"
+              [history]="history"
+              [follow]="follow"
+              [showHistory]="showHistory"
+              (selectDevice)="onSelect($event)"
             >
-              <span
-                class="dot"
-                [class.active]="d.active"
-                [class.inactive]="!d.active"
-              ></span>
-
-              <div class="main">
-                <div class="eui">{{ d.device_eui }}</div>
-                <div class="meta">
-                  Bat: <b>{{ d.battery ?? '—' }}</b>% • RSSI:
-                  <b>{{ d.rssi ?? '—' }}</b> • vu il y a
-                  <b>{{ secondsAgoTs(d.lastTs) }}</b>
-                </div>
-              </div>
-
-              <span class="badge" [class.ok]="d.active" [class.off]="!d.active">
-                {{ d.active ? 'ACTIF' : 'INACTIF' }}
-              </span>
-            </a>
+            </app-fleet-map>
           </ng-container>
-        </mat-nav-list>
-      </ng-container>
+        </ng-container>
 
-      <ng-template #emptyState>
-        <div class="empty">Aucun équipement reçu.</div>
-      </ng-template>
-    </mat-card-content>
-  </mat-card>
+        <div class="mapFooter">
+          <div class="legend">
+            <span><span class="lgDot ok"></span> Actif</span>
+            <span><span class="lgDot off"></span> Inactif</span>
+            <span><span class="lgDot last"></span> Dernier point</span>
+          </div>
+
+          <div class="histState">
+            <span class="pill" *ngIf="loadingHistory">Chargement…</span>
+
+            <span class="pill off" *ngIf="!loadingHistory && historyError">
+              {{ historyError }}
+            </span>
+
+            <span class="pill" *ngIf="!loadingHistory && !historyError">
+              Points: <b>{{ history.length }}</b>
+            </span>
+
+            <span
+              class="pill warn"
+              *ngIf="!loadingHistory && !historyError && history.length === 0 && (selected$ | async)"
+            >
+              Aucun point dans cette fenêtre
+            </span>
+          </div>
+        </div>
+
+        <ng-template #loadingDevices>
+          <div class="empty">Chargement des équipements…</div>
+        </ng-template>
+
+        <ng-template #emptyDevices>
+          <div class="empty">Aucun équipement reçu.</div>
+        </ng-template>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- LISTE -->
+    <mat-card class="panel">
+      <mat-card-title>
+        Équipements
+        <span class="count" *ngIf="(filtered$ | async) as d">({{ d.length }})</span>
+      </mat-card-title>
+
+      <mat-card-content>
+        <ng-container *ngIf="(filtered$ | async) as devices">
+          <mat-nav-list *ngIf="devices.length > 0; else emptyState">
+            <ng-container *ngIf="(selected$ | async) as selected">
+              <a
+                mat-list-item
+                class="equip-item"
+                *ngFor="let d of devices"
+                (click)="onSelect(d.device_eui)"
+                [class.selected]="d.device_eui === selected"
+                role="button"
+                tabindex="0"
+              >
+                <span
+                  class="dot"
+                  [class.active]="d.active"
+                  [class.inactive]="!d.active"
+                ></span>
+
+                <div class="main">
+                  <div class="eui">{{ d.device_eui }}</div>
+                  <div class="meta">
+                    Bat: <b>{{ d.battery ?? '—' }}</b>% • RSSI:
+                    <b>{{ d.rssi ?? '—' }}</b> • vu il y a
+                    <b>{{ secondsAgoTs(d.lastTs) }}</b>
+                  </div>
+                </div>
+
+                <span class="badge" [class.ok]="d.active" [class.off]="!d.active">
+                  {{ d.active ? 'ACTIF' : 'INACTIF' }}
+                </span>
+              </a>
+            </ng-container>
+          </mat-nav-list>
+        </ng-container>
+
+        <ng-template #emptyState>
+          <div class="empty">Aucun équipement reçu.</div>
+        </ng-template>
+      </mat-card-content>
+    </mat-card>
+  </div>
 </div>

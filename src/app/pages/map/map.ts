@@ -6,8 +6,9 @@ import {
   distinctUntilChanged,
   EMPTY,
   Observable,
-  Subscription,
+  Subject,
   switchMap,
+  takeUntil,
   tap,
 } from 'rxjs';
 
@@ -54,10 +55,9 @@ export class MapComponent implements OnInit, OnDestroy {
   loadingHistory = false;
   historyError: string | null = null;
 
-  // ✅ Non-null : tableau toujours défini → template doit utiliser history.length (sans ?.)
   history: TelemetryPoint[] = [];
 
-  private sub = new Subscription();
+  private destroy$ = new Subject<void>();
 
   constructor(
     private api: TelemetryApiService,
@@ -69,28 +69,28 @@ export class MapComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
+    // Poll flotte (positions "latest")
     this.store.startFleetPolling(5000);
 
-    this.sub.add(
-      combineLatest([this.selected$, this.windowKey$])
-        .pipe(
-          distinctUntilChanged((a, b) => a[0] === b[0] && a[1] === b[1]),
-          switchMap(([eui, windowKey]) => {
-            if (!eui) {
-              this.history = [];
-              this.loadingHistory = false;
-              this.historyError = null;
-              return EMPTY;
-            }
-            return this.loadHistory$(eui, windowKey);
-          })
-        )
-        .subscribe()
-    );
+    // Reload historique quand device ou fenêtre change
+    combineLatest([this.selected$, this.windowKey$])
+      .pipe(
+        distinctUntilChanged((a, b) => a[0] === b[0] && a[1] === b[1]),
+        switchMap(([eui, windowKey]) => {
+          if (!eui) {
+            this.resetHistoryUI();
+            return EMPTY;
+          }
+          return this.loadHistory$(eui, windowKey);
+        }),
+        takeUntil(this.destroy$)
+      )
+      .subscribe();
   }
 
   ngOnDestroy(): void {
-    this.sub.unsubscribe();
+    this.destroy$.next();
+    this.destroy$.complete();
     this.store.stopFleetPolling();
   }
 
@@ -105,7 +105,7 @@ export class MapComponent implements OnInit, OnDestroy {
 
   refresh() {
     this.store.refreshFleetOnce();
-    // force reload history sur la même fenêtre
+    // retrigger history load on same window key
     this.windowKey$.next(this.windowKey$.value);
   }
 
@@ -119,6 +119,12 @@ export class MapComponent implements OnInit, OnDestroy {
     if (!tsSec) return '—';
     const s = Math.max(0, Math.round(Date.now() / 1000 - tsSec));
     return `${s}s`;
+  }
+
+  private resetHistoryUI() {
+    this.history = [];
+    this.loadingHistory = false;
+    this.historyError = null;
   }
 
   private loadHistory$(deviceEui: string, windowKey: WindowKey) {
@@ -139,8 +145,7 @@ export class MapComponent implements OnInit, OnDestroy {
           },
           error: (err) => {
             console.error(err);
-            this.history = [];
-            this.loadingHistory = false;
+            this.resetHistoryUI();
             this.historyError = 'Impossible de charger l’historique';
           },
         })
