@@ -90,7 +90,7 @@
 
           <span
             class="pill warn"
-            *ngIf="!loadingHistory && !historyError && (history?.length ?? 0) === 0 && (selected$ | async)"
+            *ngIf="!loadingHistory && !historyError && history.length === 0 && (selected$ | async)"
           >
             Aucun point dans cette fenêtre
           </span>

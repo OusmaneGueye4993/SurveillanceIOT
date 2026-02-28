@@ -1,9 +1,8 @@
 <div class="brand">
   <div class="logo">DS</div>
-  <div>
-    <div class="name">DroneSafe</div>
-    <div class="tag">Monitoring</div>
-  </div>
+  <div *ngIf="user$ | async as u">
+  {{ u.email || u.username }}
+</div>
 </div>
 
 <mat-nav-list>
