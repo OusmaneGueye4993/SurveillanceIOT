@@ -14,22 +14,12 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatSelectModule } from '@angular/material/select';
 import { MatOptionModule } from '@angular/material/core';
 import { MatDividerModule } from '@angular/material/divider';
-import { MatListModule } from '@angular/material/list';
-import { MatTableModule } from '@angular/material/table';
 
 import { TelemetryStoreService } from '../../core/store/telemetry-store.service';
 import { DashboardSettingsService } from '../../core/settings/dashboard-settings.service';
-
-// ✅ ton “/devices” embarqué dans dashboard
-import { DevicesComponent} from '../../core/devices/devices';
-
-// ✅ store multi-user devices
 import { DeviceStoreService } from '../../core/devices/device-store.service';
 
-// ✅ composants déjà utilisés dans ton HTML
-import { FleetMapComponent } from '../../shared/fleet-map/fleet-map';
 import { MiniMapComponent } from '../../shared/mini-map/mini-map';
-import { TelemetryChartComponent } from '../telemetry/telemetry';
 import { DeviceSummary } from '../../core/models/telemetry.models';
 
 type AlertItem = { level: 'critical' | 'warn'; message: string };
@@ -50,21 +40,13 @@ type AlertItem = { level: 'critical' | 'warn'; message: string };
     MatSelectModule,
     MatOptionModule,
     MatDividerModule,
-    MatListModule,
-    MatTableModule,
 
-    FleetMapComponent,
-
-    TelemetryChartComponent,
-
-    // ✅ pour afficher le contenu /devices dans dashboard quand aucun device
-
+    MiniMapComponent,
   ],
   templateUrl: './dashboard.html',
   styleUrls: ['./dashboard.scss'],
 })
 export class DashboardComponent implements OnInit, OnDestroy {
-  // ✅ IMPORTANT : inject() évite TS2729
   private fleet = inject(TelemetryStoreService);
   private settings = inject(DashboardSettingsService);
   private deviceStore = inject(DeviceStoreService);
@@ -74,27 +56,36 @@ export class DashboardComponent implements OnInit, OnDestroy {
   filtered$!: Observable<DeviceSummary[]>;
   selected$!: Observable<string | null>;
 
-  // ✅ multi-user devices (source de vérité pour savoir si user a des devices)
+  // multi-user devices (source de vérité: est-ce que le user a des devices ?)
   myDevices$ = this.deviceStore.devices$;
   myDevicesLoading$ = this.deviceStore.loading$;
   myDevicesError$ = this.deviceStore.error$;
-
   hasAnyDevice$ = this.myDevices$.pipe(map((list) => (list?.length ?? 0) > 0));
 
   searchCtrl = new FormControl<string>('', { nonNullable: true });
 
   cfg$!: Observable<any>;
-  telemetry$!: Observable<any | null>;
+
+  selectedDevice$!: Observable<DeviceSummary | null>;
+  telemetry$!: Observable<{
+    device_eui: string;
+    ts: number | null;
+    lat: number | null;
+    lng: number | null;
+    temp: number | null;
+    battery: number | null;
+    rssi: number | null;
+  } | null>;
+
   alerts$!: Observable<AlertItem[]>;
-  history: any[] = [];
 
   private sub = new Subscription();
 
   ngOnInit(): void {
-    // ✅ charge liste devices du user
+    // charge liste devices du user
     this.deviceStore.refresh();
 
-    // ✅ store flotte (télémétrie)
+    // flotte (télémétrie)
     this.status$ = this.fleet.status$;
     this.devices$ = this.fleet.devices$;
     this.filtered$ = this.fleet.filtered$;
@@ -102,16 +93,25 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
     this.cfg$ = this.settings.config$;
 
-    // polling flotte (tu peux garder ton intervalle)
+    // polling flotte
     this.fleet.startFleetPolling(5000);
 
+    // search
     this.sub.add(
       this.searchCtrl.valueChanges
         .pipe(startWith(this.searchCtrl.value), debounceTime(150))
         .subscribe((v) => this.fleet.setSearch(v))
     );
 
-    // point courant (basé sur selected + devices)
+    // device sélectionné
+    this.selectedDevice$ = combineLatest([this.selected$, this.devices$]).pipe(
+      map(([eui, devices]) => {
+        if (!eui) return null;
+        return devices.find((x) => x.device_eui === eui) ?? null;
+      })
+    );
+
+    // point courant
     this.telemetry$ = combineLatest([this.selected$, this.devices$]).pipe(
       map(([eui, devices]) => {
         if (!eui) return null;
@@ -129,40 +129,14 @@ export class DashboardComponent implements OnInit, OnDestroy {
           ts,
           lat,
           lng,
-          temp: d.temp ?? d.last?.temp ?? null,
-          battery: d.battery ?? d.last?.battery ?? null,
-          rssi: d.rssi ?? d.last?.rssi ?? null,
+          temp: (d.temp ?? d.last?.temp ?? null) as any,
+          battery: (d.battery ?? d.last?.battery ?? null) as any,
+          rssi: (d.rssi ?? d.last?.rssi ?? null) as any,
         };
       })
     );
 
-    // reset history quand on change de device
-    this.sub.add(
-      this.selected$.subscribe(() => {
-        this.history = [];
-      })
-    );
-
-    // push history
-    this.sub.add(
-      this.telemetry$.subscribe((t) => {
-        if (!t) return;
-        if (t.lat == null || t.lng == null) return;
-
-        const last = this.history[this.history.length - 1];
-        const same =
-          last &&
-          Math.abs(last.lat - t.lat) < 1e-7 &&
-          Math.abs(last.lng - t.lng) < 1e-7 &&
-          Math.abs(Number(last.battery) - Number(t.battery)) < 1e-7 &&
-          Math.abs(Number(last.rssi) - Number(t.rssi)) < 1e-7;
-
-        if (same) return;
-        this.history = [...this.history, t].slice(-3000);
-      })
-    );
-
-    // alerts
+    // alertes (compact)
     this.alerts$ = combineLatest([this.telemetry$, this.cfg$]).pipe(
       map(([t, cfg]) => {
         const out: AlertItem[] = [];
@@ -187,7 +161,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
           out.push({ level: 'warn', message: `Température élevée: ${Math.round(temp)}°C` });
         }
 
-        return out;
+        return out.slice(0, 3); // compact
       })
     );
   }
