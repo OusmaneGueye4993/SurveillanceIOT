@@ -17,10 +17,10 @@ export interface DashboardWidgetConfig {
 }
 
 export interface AlertThresholds {
-  batteryLow: number;      // %
-  rssiLow: number;         // dBm (ex: -90)
-  tempHigh: number;        // °C
-  staleSeconds: number;    // pas de data depuis X secondes
+  batteryLow: number;
+  rssiLow: number;
+  tempHigh: number;
+  staleSeconds: number;
 }
 
 export interface DashboardConfig {
