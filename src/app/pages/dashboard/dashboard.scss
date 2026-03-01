@@ -1,4 +1,9 @@
-/* ===== Header ===== */
+/* =========================================================
+   Dashboard (SaaS) — layout léger & pro
+   NOTE: pas de logique modifiée, uniquement UI.
+   ========================================================= */
+
+/* ---------- Header ---------- */
 .dashHead {
   display: flex;
   align-items: flex-end;
@@ -9,8 +14,8 @@
 
 .dashHead .left h2 {
   margin: 0;
-  font-weight: 850;
-  letter-spacing: 0.2px;
+  font-weight: 900;
+  letter-spacing: -0.02em;
   font-size: 26px;
 }
 
@@ -24,217 +29,230 @@
 }
 
 .sep { opacity: 0.5; }
-.ok { color: #2e7d32; }
+.ok { color: var(--primary); }
 
 .dashHead .right {
   display: flex;
-  gap: 12px;
   align-items: center;
+  gap: 12px;
   flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
-.ctrl { min-width: 240px; }
-.deviceCtrl { min-width: 280px; }
+.ctrl { min-width: 230px; }
+.deviceCtrl { min-width: 260px; }
 .searchCtrl { min-width: 240px; }
 
-/* ===== Card table ===== */
+@media (max-width: 900px) {
+  .dashHead { align-items: flex-start; }
+  .dashHead .right { width: 100%; justify-content: flex-start; }
+  .ctrl, .deviceCtrl, .searchCtrl { min-width: 100%; }
+}
+
+/* ---------- Table card (compact) ---------- */
 .cardTable {
-  border-radius: 16px;
-  overflow: hidden;
   margin-bottom: 14px;
 }
 
 .cardHeader {
-  padding: 16px 16px 0 16px;
   display: flex;
   align-items: baseline;
   justify-content: space-between;
   gap: 12px;
+  padding: 14px 16px 0 16px;
 }
 
-.cardHeader .title { font-weight: 850; font-size: 18px; }
-.muted { opacity: 0.65; font-size: 12px; }
-.hintRight { opacity: 0.65; font-size: 12px; }
-.tableWrap { padding: 8px 12px 14px 12px; }
+.title {
+  font-weight: 900;
+  letter-spacing: -0.01em;
+}
 
-/* ===== Table look pro ===== */
+.muted {
+  opacity: 0.7;
+  font-size: 13px;
+}
+
+.tableActions .link,
+.link {
+  color: var(--primary);
+  text-decoration: none;
+  font-weight: 800;
+  font-size: 13px;
+}
+.link:hover { text-decoration: underline; }
+
+.tableWrap {
+  overflow: auto;
+  border-radius: 14px;
+}
+
 .proTable {
   width: 100%;
-  border-collapse: separate;
-  border-spacing: 0 10px;
 }
 
-:host ::ng-deep .proTable .mat-mdc-header-row { height: 44px; }
-:host ::ng-deep .proTable .mat-mdc-header-cell {
-  font-weight: 800;
-  opacity: 0.75;
-  border-bottom: none;
-  padding-bottom: 6px;
+.proTable th.mat-mdc-header-cell {
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  opacity: 0.65;
+  padding-top: 10px;
+  padding-bottom: 10px;
 }
 
-:host ::ng-deep .proTable .mat-mdc-row {
-  background: #fff;
-  border-radius: 14px;
-  transition: transform 0.08s ease, box-shadow 0.14s ease;
+.proTable td.mat-mdc-cell {
+  padding-top: 12px;
+  padding-bottom: 12px;
+}
+
+.proTable tr.mat-mdc-row:hover {
+  background: rgba(31, 111, 74, 0.05);
   cursor: pointer;
 }
 
-:host ::ng-deep .proTable .mat-mdc-row:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 12px 26px rgba(0, 0, 0, 0.10);
+.proTable tr.selected {
+  background: rgba(31, 111, 74, 0.10);
 }
 
-:host ::ng-deep .proTable .mat-mdc-row.selected {
-  background: rgba(25, 118, 210, 0.10);
-  box-shadow: 0 12px 26px rgba(25, 118, 210, 0.16);
+.deviceCell {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
 }
+.devName { font-weight: 900; }
+.devSub { font-size: 12px; opacity: 0.65; }
 
-:host ::ng-deep .proTable .mat-mdc-cell {
-  border-bottom: none;
-  padding-top: 14px;
-  padding-bottom: 14px;
-}
+.actionCell { text-align: right; }
+.btnView { border-radius: 999px !important; }
 
-.deviceCell { display: flex; flex-direction: column; gap: 2px; }
-.devName { font-weight: 900; letter-spacing: 0.2px; }
-.devSub { font-size: 12px; opacity: 0.6; }
-.num { font-weight: 850; }
-
-/* ===== Status chip ===== */
+/* Status chip */
 .chip {
   display: inline-flex;
   align-items: center;
   gap: 8px;
+  font-weight: 800;
+  font-size: 12px;
   padding: 6px 10px;
   border-radius: 999px;
-  font-size: 12px;
-  font-weight: 900;
-  border: 1px solid rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(18, 70, 47, 0.14);
+  background: rgba(255, 255, 255, 0.7);
 }
 
 .dot {
-  width: 10px;
-  height: 10px;
+  width: 9px;
+  height: 9px;
   border-radius: 50%;
-  display: inline-block;
-  background: rgba(0, 0, 0, 0.25);
+  background: #bbb;
 }
 
-.chip.on { background: rgba(46, 125, 50, 0.12); color: #2e7d32; }
-.chip.off { background: rgba(198, 40, 40, 0.12); color: #c62828; }
-.dot.on { background: #2e7d32; }
-.dot.off { background: #c62828; }
+.dot.on { background: #20b26b; }
+.dot.off { background: #e24b4b; }
 
-/* ===== Battery bar ===== */
+.chip.on { color: #0c5a34; }
+.chip.off { color: #8a2a2a; }
+
+/* Battery bar (mini) */
 .batWrap {
   display: flex;
-  flex-direction: column;
-  gap: 6px;
-  min-width: 110px;
+  align-items: center;
+  gap: 10px;
 }
 
+.num { font-weight: 900; }
+
 .batBar {
-  height: 6px;
+  --p: 0;
+  display: inline-block;
+  width: 120px;
+  height: 8px;
   border-radius: 999px;
-  background: rgba(0, 0, 0, 0.08);
+  background: rgba(31, 41, 55, 0.08);
   position: relative;
   overflow: hidden;
 }
+
 .batBar::after {
   content: "";
   position: absolute;
-  inset: 0;
-  width: calc(var(--p, 0) * 1%);
-  background: rgba(25, 118, 210, 0.85);
+  left: 0; top: 0; bottom: 0;
+  width: calc(var(--p) * 1%);
+  background: rgba(31, 111, 74, 0.7);
   border-radius: 999px;
 }
 
-.actionCell { text-align: right; }
-.btnView { border-radius: 999px; padding: 0 14px; }
-
-.empty {
-  padding: 14px;
-  opacity: 0.8;
-  border-radius: 14px;
-  background: rgba(0, 0, 0, 0.03);
+@media (max-width: 900px) {
+  .batBar { width: 80px; }
 }
 
-/* ===== Fleet map ===== */
-.fleet-map-card {
-  border-radius: 16px;
-  overflow: hidden;
-  margin-bottom: 18px;
-}
-.fleet-map-card mat-card-content { padding: 0; }
-.fleet-map-card app-fleet-map { display: block; height: 420px; }
-
-.mapHint {
-  padding: 10px 14px;
-  font-size: 12px;
-  opacity: 0.78;
-  background: rgba(0, 0, 0, 0.03);
-  border-top: 1px solid rgba(0, 0, 0, 0.06);
-}
-
-/* ===== KPI / GRID ===== */
+/* ---------- Widgets grid ---------- */
 .grid {
   display: grid;
-  gap: 14px;
-
-  /* ✅ Desktop: 4 cartes sur une ligne */
+  gap: 12px;
   grid-template-columns: repeat(4, minmax(0, 1fr));
+  align-items: stretch;
 }
 
-.kpi {
-  border-radius: 18px;
-  min-width: 0; /* ✅ évite le wrap “bizarre” */
-}
-
-.wide {
-  grid-column: 1 / -1; /* ✅ pleine largeur */
-  border-radius: 18px;
-}
-
-/* ✅ Responsive: si écran petit on autorise 2 ou 1 colonne */
 @media (max-width: 1100px) {
   .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
-@media (max-width: 650px) {
+
+@media (max-width: 640px) {
   .grid { grid-template-columns: 1fr; }
+}
+
+/* KPI cards */
+.kpi {
+  border-radius: var(--r-lg) !important;
+  overflow: hidden;
 }
 
 .kpi-content {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 12px;
 }
 
-.kpi-left { display: flex; align-items: center; gap: 12px; }
+.kpi-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
 
 .kpi-icon {
-  width: 44px;
-  height: 44px;
+  width: 42px;
+  height: 42px;
   border-radius: 14px;
   display: grid;
   place-items: center;
-  background: rgba(0, 0, 0, 0.06);
+  background: rgba(31, 111, 74, 0.10);
 }
 
 .kpi-title { font-weight: 900; }
-.kpi-sub { opacity: 0.75; font-size: 12px; }
+.kpi-sub { font-size: 12px; opacity: 0.7; }
 
 .kpi-value {
   font-weight: 950;
-  font-size: 24px;
+  font-size: 22px;
+  letter-spacing: -0.02em;
 }
 .kpi-value.small { font-size: 14px; }
 
-.kpi-battery { background: rgba(46, 125, 50, 0.10); }
-.kpi-battery-low { background: rgba(198, 40, 40, 0.10); }
+/* Battery alert coloring (soft) */
+.kpi-battery-low {
+  border-color: rgba(226, 75, 75, 0.35) !important;
+  box-shadow: 0 14px 30px rgba(226, 75, 75, 0.10) !important;
+}
+.kpi-battery-low .kpi-icon { background: rgba(226, 75, 75, 0.10); }
 
-/* ===== Mini map widget ===== */
+/* Wide widgets take full row */
+.wide {
+  grid-column: 1 / -1;
+}
+
+/* Mini-map */
 .miniMapCard {
-  overflow: hidden;
+  grid-column: 1 / -1;
 }
 
 .miniMapHead {
@@ -242,63 +260,84 @@
   align-items: baseline;
   justify-content: space-between;
   gap: 12px;
-  padding: 14px 14px 0 14px;
+  padding: 14px 16px 0 16px;
 }
 
-.miniMapTitle {
-  font-weight: 950;
+.miniMapTitle { font-weight: 900; }
+.miniMapHint a {
+  color: var(--primary);
+  text-decoration: none;
+  font-weight: 800;
+  font-size: 13px;
 }
-
-.miniMapHint {
-  opacity: 0.7;
-  font-size: 12px;
-  text-align: right;
-}
+.miniMapHint a:hover { text-decoration: underline; }
 
 .miniMapBody {
-  padding: 12px 14px 14px 14px;
+  padding: 10px 12px 14px 12px;
 }
 
-/* Alerts */
+.miniMapBody app-mini-map {
+  display: block;
+  width: 100%;
+  height: 220px;
+  border-radius: var(--r-md);
+  overflow: hidden;
+}
+
+/* Wide header */
+.wideHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px 0 16px;
+}
+
+.wideTitle { font-weight: 900; }
+
+/* Alerts condensed */
 .alert {
-  padding: 10px;
+  padding: 10px 12px;
   border-radius: 12px;
-  background: rgba(0, 0, 0, 0.03);
+  border: 1px solid rgba(18, 70, 47, 0.10);
+  background: rgba(31, 111, 74, 0.06);
   margin-bottom: 8px;
+  font-size: 13px;
 }
-.alert.warn { background: rgba(255, 152, 0, 0.12); }
-.alert.critical { background: rgba(198, 40, 40, 0.12); }
-.hint { opacity: 0.75; }
 
-/* ===== Onboarding ===== */
-.onboardWrap { display: grid; gap: 14px; }
+.alert.warn {
+  background: rgba(245, 158, 11, 0.10);
+  border-color: rgba(245, 158, 11, 0.22);
+}
 
+.alert.critical {
+  background: rgba(226, 75, 75, 0.10);
+  border-color: rgba(226, 75, 75, 0.22);
+}
+
+.moreHint {
+  opacity: 0.7;
+  font-size: 12px;
+  margin-top: 6px;
+}
+
+.hint { opacity: 0.7; }
+
+/* Onboarding */
+.onboardWrap { padding: 10px 0; }
 .onboardHero {
-  border-radius: 18px;
-  padding: 14px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 14px;
-  overflow: hidden;
-  background: linear-gradient(135deg, rgba(25, 118, 210, 0.10), rgba(156, 39, 176, 0.08));
-  border: 1px solid rgba(0, 0, 0, 0.06);
+  gap: 16px;
+  padding: 18px;
 }
-
-.heroLeft { display: grid; gap: 6px; min-width: 240px; }
 
 .heroTitle {
   font-weight: 950;
   font-size: 18px;
-  letter-spacing: 0.2px;
+  margin-bottom: 4px;
 }
 
-.heroSub {
-  opacity: 0.82;
-  font-size: 13px;
-  line-height: 1.35;
-}
-
-.mutedInline { opacity: 0.75; margin-left: 6px; }
-.heroRight button { border-radius: 999px; padding: 0 16px; }
-.embeddedDevices { border-radius: 18px; }
+.heroSub { opacity: 0.85; }
+.mutedInline { opacity: 0.7; }

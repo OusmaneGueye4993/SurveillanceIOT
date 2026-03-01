@@ -17,18 +17,19 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatListModule } from '@angular/material/list';
 import { MatTableModule } from '@angular/material/table';
 
-import { TelemetryStoreService } from '../../core/store/telemetry-store.service';
-import { DashboardSettingsService } from '../../core/settings/dashboard-settings.service';
-import { DeviceStoreService } from '../../core/devices/device-store.service';
-
-import { FleetMapComponent } from '../../shared/fleet-map/fleet-map';
 import { MiniMapComponent } from '../../shared/mini-map/mini-map';
 import { TelemetryChartComponent } from '../telemetry/telemetry';
 
-import { DeviceSummary } from '../../core/models/telemetry.models';
+// ✅ IMPORTANT: le vrai store est dans core/store (selon ton fichier)
+import { TelemetryStoreService } from '../../core/store/telemetry-store.service';
+
+import { DeviceStoreService } from '../../core/devices/device-store.service';
+import { DashboardSettingsService } from '../../core/settings/dashboard-settings.service';
 import { DashboardConfig } from '../../core/settings/dashboard-config.model';
 
-type AlertItem = { level: 'critical' | 'warn'; message: string };
+export type AlertItem = { level: 'warn' | 'critical'; message: string };
+
+type DeviceSummary = any;
 
 @Component({
   selector: 'app-dashboard',
@@ -49,7 +50,6 @@ type AlertItem = { level: 'critical' | 'warn'; message: string };
     MatListModule,
     MatTableModule,
 
-    FleetMapComponent,
     MiniMapComponent,
     TelemetryChartComponent,
   ],
@@ -164,7 +164,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
         const temp = Number(t.temp);
         if (Number.isFinite(temp) && Number.isFinite(tempHigh) && temp > tempHigh) {
-          out.push({ level: 'warn', message: `Température élevée: ${Math.round(temp)}°C` });
+          out.push({ level: 'warn', message: `Temp élevée: ${Math.round(temp)}°C` });
         }
 
         return out;
@@ -177,35 +177,29 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.fleet.stopFleetPolling();
   }
 
-  onSelect(eui: string): void {
+  onSelect(eui: string | null) {
+    // ✅ FIX: le store expose select(eui: string), pas setSelected()
+    if (!eui) return;
     this.fleet.select(eui);
   }
 
-  trackByEui(_: number, d: DeviceSummary): string {
-    return d.device_eui;
+  trackByEui(_: number, d: any) {
+    return d?.device_eui ?? _;
   }
 
-  fmt(v: any, digits = 0): string {
+  secondsAgo(ms?: number | null) {
+    if (!ms) return '—';
+    const s = Math.max(0, Math.floor((Date.now() - ms) / 1000));
+    if (s < 60) return `${s}s`;
+    const m = Math.floor(s / 60);
+    if (m < 60) return `${m}m`;
+    const h = Math.floor(m / 60);
+    return `${h}h`;
+  }
+
+  fmt(v: any, decimals = 0) {
     const n = Number(v);
     if (!Number.isFinite(n)) return '—';
-    return n.toFixed(digits);
-  }
-
-  secondsAgo(lastSeenMs?: number | null): string {
-    if (!lastSeenMs) return '—';
-    const deltaMs = Date.now() - lastSeenMs;
-    if (deltaMs <= 0) return '0s';
-
-    const s = Math.floor(deltaMs / 1000);
-    if (s < 60) return `${s}s`;
-
-    const m = Math.floor(s / 60);
-    if (m < 60) return `${m}min`;
-
-    const h = Math.floor(m / 60);
-    if (h < 24) return `${h}h`;
-
-    const d = Math.floor(h / 24);
-    return `${d}j`;
+    return n.toFixed(decimals);
   }
 }

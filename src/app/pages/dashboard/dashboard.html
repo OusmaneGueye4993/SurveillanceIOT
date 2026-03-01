@@ -1,6 +1,7 @@
-<!-- ✅ Si user n'a aucun device : on affiche le contenu /devices -->
+<!-- Dashboard SaaS (léger) : table devices + widgets configurables -->
 <ng-container *ngIf="(hasAnyDevice$ | async) === true; else noDevices">
 
+  <!-- Header -->
   <div class="dashHead">
     <div class="left">
       <h2>Dashboard</h2>
@@ -35,13 +36,17 @@
     </div>
   </div>
 
+  <!-- Table devices (compact) -->
   <mat-card class="cardTable" *ngIf="(filtered$ | async) as devices">
     <div class="cardHeader">
       <div>
         <div class="title">Appareils détectés</div>
         <div class="muted">{{ devices.length }} équipement(s)</div>
       </div>
-      <div class="hintRight">Cliquez sur une ligne pour visualiser</div>
+
+      <div class="tableActions">
+        <a class="link" routerLink="/devices">Gérer les appareils →</a>
+      </div>
     </div>
 
     <mat-card-content>
@@ -125,30 +130,11 @@
     </mat-card-content>
   </mat-card>
 
-  <ng-container *ngIf="(filtered$ | async) as devices">
-    <mat-card class="map-card fleet-map-card">
-      <mat-card-title>Carte flotte</mat-card-title>
-
-      <mat-card-content>
-        <ng-container *ngIf="(selected$ | async) as selected">
-          <app-fleet-map
-            [follow]="true"
-            [devices]="devices"
-            [selected]="selected"
-            [showHistory]="false"
-            (selectDevice)="onSelect($event)"
-          ></app-fleet-map>
-
-          <div class="mapHint">
-            🟢 Actif • 🔴 Inactif • Cliquez sur un marker ou une ligne
-          </div>
-        </ng-container>
-      </mat-card-content>
-    </mat-card>
-  </ng-container>
-
+  <!-- Widgets -->
   <ng-container *ngIf="(telemetry$ | async) as t; else noData">
     <ng-container *ngIf="cfg$ | async as cfg">
+
+      <!-- KPI grid (4 cartes sur une ligne desktop) -->
       <div class="grid">
         <ng-container *ngFor="let w of cfg.widgets">
           <ng-container *ngIf="w.enabled">
@@ -224,11 +210,13 @@
               </mat-card-content>
             </mat-card>
 
-            <!-- ✅ Mini map (sous les KPI via CSS) -->
+            <!-- ✅ Mini map (widget) -->
             <mat-card *ngIf="w.type === 'mini-map'" class="wide miniMapCard">
               <div class="miniMapHead">
                 <div class="miniMapTitle">{{ w.title }}</div>
-                <div class="miniMapHint">Astuce : utilise “Carte” pour la vue flotte complète.</div>
+                <div class="miniMapHint">
+                  <a routerLink="/map">Ouvrir la carte complète →</a>
+                </div>
               </div>
 
               <div class="miniMapBody">
@@ -236,34 +224,46 @@
               </div>
             </mat-card>
 
-            <!-- Chart -->
-            <mat-card *ngIf="w.type === 'chart-telemetry'" class="wide">
-              <mat-card-title>{{ w.title }} ({{ cfg.chartType }})</mat-card-title>
-              <mat-card-content>
-                <app-telemetry-chart
-                  [chartType]="cfg.chartType"
-                  [history]="history"
-                  [point]="t"
-                ></app-telemetry-chart>
-              </mat-card-content>
-            </mat-card>
-
-            <!-- Alerts -->
+            <!-- Alerts (condensé) -->
             <mat-card *ngIf="w.type === 'alerts'" class="wide">
-              <mat-card-title>{{ w.title }}</mat-card-title>
+              <div class="wideHead">
+                <div class="wideTitle">{{ w.title }}</div>
+                <a class="link" routerLink="/alerts">Voir tout →</a>
+              </div>
+
               <mat-card-content>
                 <div *ngIf="alerts$ | async as a">
                   <p *ngIf="a.length === 0" class="hint">Aucune alerte.</p>
 
                   <div
-                    *ngFor="let item of a"
+                    *ngFor="let item of (a | slice:0:3)"
                     class="alert"
                     [class.critical]="item.level === 'critical'"
                     [class.warn]="item.level === 'warn'"
                   >
                     <b>{{ item.level }}</b> — {{ item.message }}
                   </div>
+
+                  <div *ngIf="a.length > 3" class="moreHint">
+                    +{{ a.length - 3 }} autre(s) alerte(s)
+                  </div>
                 </div>
+              </mat-card-content>
+            </mat-card>
+
+            <!-- Chart -->
+            <mat-card *ngIf="w.type === 'chart-telemetry'" class="wide">
+              <div class="wideHead">
+                <div class="wideTitle">{{ w.title }}</div>
+                <a class="link" routerLink="/telemetry">Ouvrir télémétrie →</a>
+              </div>
+
+              <mat-card-content>
+                <app-telemetry-chart
+                  [chartType]="cfg.chartType"
+                  [history]="history"
+                  [point]="t"
+                ></app-telemetry-chart>
               </mat-card-content>
             </mat-card>
 
@@ -276,8 +276,10 @@
   <ng-template #noData>
     <p>Aucune donnée reçue.</p>
   </ng-template>
+
 </ng-container>
 
+<!-- Onboarding -->
 <ng-template #noDevices>
   <div class="onboardWrap">
     <mat-card class="onboardHero">
@@ -295,13 +297,5 @@
         </button>
       </div>
     </mat-card>
-
-    <div class="embeddedDevices">
-      <div class="devices-cta">
-        <button mat-raised-button color="primary" routerLink="/devices">
-          Gérer mes appareils
-        </button>
-      </div>
-    </div>
   </div>
 </ng-template>
