@@ -27,7 +27,7 @@ export class DeviceService {
     device_eui: string;
     name?: string;
     description?: string;
-    claim_code?: string; // ✅ NEW
+    claim_code?: string;
   }): Observable<Device> {
     return this.http.post<Device>(`${this.base}/v1/me/devices/`, payload);
   }
@@ -39,7 +39,7 @@ export class DeviceService {
   }
 
   setActive(deviceEui: string): Observable<Device> {
-    return this.http.patch<Device>(
+    return this.http.post<Device>(
       `${this.base}/v1/me/devices/${encodeURIComponent(deviceEui)}/active/`,
       {}
     );

@@ -3,8 +3,22 @@ import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormControl } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 
-import { Observable, Subscription, combineLatest } from 'rxjs';
-import { debounceTime, map, startWith } from 'rxjs/operators';
+import {
+  BehaviorSubject,
+  EMPTY,
+  Observable,
+  Subscription,
+  combineLatest,
+} from 'rxjs';
+import {
+  catchError,
+  debounceTime,
+  distinctUntilChanged,
+  map,
+  startWith,
+  switchMap,
+  tap,
+} from 'rxjs/operators';
 
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
@@ -20,12 +34,12 @@ import { MatTableModule } from '@angular/material/table';
 import { MiniMapComponent } from '../../shared/mini-map/mini-map';
 import { TelemetryChartComponent } from '../telemetry/telemetry';
 
-// ✅ IMPORTANT: le vrai store est dans core/store (selon ton fichier)
 import { TelemetryStoreService } from '../../core/store/telemetry-store.service';
-
 import { DeviceStoreService } from '../../core/devices/device-store.service';
 import { DashboardSettingsService } from '../../core/settings/dashboard-settings.service';
 import { DashboardConfig } from '../../core/settings/dashboard-config.model';
+import { TelemetryApiService } from '../../core/api/telemetry-api.service';
+import { TelemetryPoint } from '../../core/models/telemetry.models';
 
 export type AlertItem = { level: 'warn' | 'critical'; message: string };
 
@@ -38,7 +52,6 @@ type DeviceSummary = any;
     CommonModule,
     RouterModule,
     ReactiveFormsModule,
-
     MatCardModule,
     MatIconModule,
     MatFormFieldModule,
@@ -49,7 +62,6 @@ type DeviceSummary = any;
     MatDividerModule,
     MatListModule,
     MatTableModule,
-
     MiniMapComponent,
     TelemetryChartComponent,
   ],
@@ -60,6 +72,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private fleet = inject(TelemetryStoreService);
   private settings = inject(DashboardSettingsService);
   private deviceStore = inject(DeviceStoreService);
+  private api = inject(TelemetryApiService);
 
   status$!: Observable<'disconnected' | 'connecting' | 'connected'>;
   devices$!: Observable<DeviceSummary[]>;
@@ -69,7 +82,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
   myDevices$ = this.deviceStore.devices$;
   myDevicesLoading$ = this.deviceStore.loading$;
   myDevicesError$ = this.deviceStore.error$;
-
   hasAnyDevice$ = this.myDevices$.pipe(map((list) => (list?.length ?? 0) > 0));
 
   searchCtrl = new FormControl<string>('', { nonNullable: true });
@@ -77,8 +89,12 @@ export class DashboardComponent implements OnInit, OnDestroy {
   cfg$!: Observable<DashboardConfig>;
   telemetry$!: Observable<any | null>;
   alerts$!: Observable<AlertItem[]>;
-  history: any[] = [];
 
+  history: TelemetryPoint[] = [];
+  historyLoading = false;
+  historyError: string | null = null;
+
+  private historyReload$ = new BehaviorSubject<number>(0);
   private sub = new Subscription();
 
   ngOnInit(): void {
@@ -88,7 +104,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.devices$ = this.fleet.devices$;
     this.filtered$ = this.fleet.filtered$;
     this.selected$ = this.fleet.selected$;
-
     this.cfg$ = this.settings.config$;
 
     this.fleet.startFleetPolling(5000);
@@ -119,28 +134,45 @@ export class DashboardComponent implements OnInit, OnDestroy {
           temp: d.temp ?? d.last?.temp ?? null,
           battery: d.battery ?? d.last?.battery ?? null,
           rssi: d.rssi ?? d.last?.rssi ?? null,
+          snr: d.snr ?? d.last?.snr ?? null,
         };
       })
     );
 
-    this.sub.add(this.selected$.subscribe(() => (this.history = [])));
-
     this.sub.add(
-      this.telemetry$.subscribe((t) => {
-        if (!t) return;
-        if (t.lat == null || t.lng == null) return;
+      combineLatest([this.selected$, this.historyReload$])
+        .pipe(
+          distinctUntilChanged((a, b) => a[0] === b[0] && a[1] === b[1]),
+          switchMap(([eui]) => {
+            if (!eui) {
+              this.history = [];
+              this.historyLoading = false;
+              this.historyError = null;
+              return EMPTY;
+            }
 
-        const last = this.history[this.history.length - 1];
-        const same =
-          last &&
-          Math.abs(last.lat - t.lat) < 1e-7 &&
-          Math.abs(last.lng - t.lng) < 1e-7 &&
-          Math.abs(Number(last.battery) - Number(t.battery)) < 1e-7 &&
-          Math.abs(Number(last.rssi) - Number(t.rssi)) < 1e-7;
+            const nowSec = Math.floor(Date.now() / 1000);
+            const fromSec = nowSec - 3600;
 
-        if (same) return;
-        this.history = [...this.history, t].slice(-3000);
-      })
+            this.historyLoading = true;
+            this.historyError = null;
+
+            return this.api.getHistory(eui, { limit: 120, fromTs: fromSec, toTs: nowSec }).pipe(
+              tap((res) => {
+                this.history = Array.isArray(res?.history) ? res.history : [];
+                this.historyLoading = false;
+              }),
+              catchError((err) => {
+                console.error(err);
+                this.history = [];
+                this.historyLoading = false;
+                this.historyError = 'Impossible de charger l’historique récent.';
+                return EMPTY;
+              })
+            );
+          })
+        )
+        .subscribe()
     );
 
     this.alerts$ = combineLatest([this.telemetry$, this.cfg$]).pipe(
@@ -164,7 +196,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
         const temp = Number(t.temp);
         if (Number.isFinite(temp) && Number.isFinite(tempHigh) && temp > tempHigh) {
-          out.push({ level: 'warn', message: `Temp élevée: ${Math.round(temp)}°C` });
+          out.push({ level: 'warn', message: `Température élevée: ${Math.round(temp)}°C` });
         }
 
         return out;
@@ -177,17 +209,22 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.fleet.stopFleetPolling();
   }
 
-  onSelect(eui: string | null) {
-    // ✅ FIX: le store expose select(eui: string), pas setSelected()
+  onSelect(eui: string | null): void {
     if (!eui) return;
     this.fleet.select(eui);
+  }
+
+  refresh(): void {
+    this.deviceStore.refresh();
+    this.fleet.refreshFleetOnce();
+    this.historyReload$.next(this.historyReload$.value + 1);
   }
 
   trackByEui(_: number, d: any) {
     return d?.device_eui ?? _;
   }
 
-  secondsAgo(ms?: number | null) {
+  secondsAgo(ms?: number | null): string {
     if (!ms) return '—';
     const s = Math.max(0, Math.floor((Date.now() - ms) / 1000));
     if (s < 60) return `${s}s`;
@@ -197,7 +234,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     return `${h}h`;
   }
 
-  fmt(v: any, decimals = 0) {
+  fmt(v: any, decimals = 0): string {
     const n = Number(v);
     if (!Number.isFinite(n)) return '—';
     return n.toFixed(decimals);

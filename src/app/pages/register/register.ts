@@ -34,7 +34,11 @@ export class RegisterComponent {
 
   form: FormGroup;
 
-  constructor(private fb: FormBuilder, private auth: AuthService, private router: Router) {
+  constructor(
+    private fb: FormBuilder,
+    private auth: AuthService,
+    private router: Router
+  ) {
     this.form = this.fb.group({
       email: ['', [Validators.required, Validators.email]],
       password: ['', [Validators.required, Validators.minLength(8)]],
@@ -43,18 +47,23 @@ export class RegisterComponent {
 
   submit(): void {
     this.error = null;
+
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       return;
     }
 
-    const { email, password } = this.form.value as { email: string; password: string };
+    const { email, password } = this.form.value as {
+      email: string;
+      password: string;
+    };
 
     this.loading = true;
+
     this.auth.registerAndLogin(email, password).subscribe({
       next: () => {
         this.loading = false;
-        this.router.navigateByUrl('/dashboard');
+        this.router.navigateByUrl('/devices');
       },
       error: (e) => {
         this.loading = false;

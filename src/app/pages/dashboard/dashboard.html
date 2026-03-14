@@ -1,7 +1,5 @@
-<!-- Dashboard SaaS (léger) : table devices + widgets configurables -->
 <ng-container *ngIf="(hasAnyDevice$ | async) === true; else noDevices">
 
-  <!-- Header -->
   <div class="dashHead">
     <div class="left">
       <h2>Dashboard</h2>
@@ -13,6 +11,10 @@
     </div>
 
     <div class="right">
+      <button mat-stroked-button type="button" (click)="refresh()">
+        Rafraîchir
+      </button>
+
       <mat-form-field appearance="outline" class="ctrl deviceCtrl">
         <mat-label>Appareil</mat-label>
         <mat-select
@@ -36,7 +38,6 @@
     </div>
   </div>
 
-  <!-- Table devices (compact) -->
   <mat-card class="cardTable" *ngIf="(filtered$ | async) as devices">
     <div class="cardHeader">
       <div>
@@ -124,162 +125,175 @@
 
       <ng-template #emptyState>
         <div class="empty">
-          Aucun équipement. Vérifie l’API <b>/api/v1/devices</b> et <b>/api/v1/telemetry/latest</b>.
+          Aucun appareil visible dans la flotte. Vérifie la liste de tes appareils et la télémétrie disponible.
         </div>
       </ng-template>
     </mat-card-content>
   </mat-card>
 
-  <!-- Widgets -->
-  <ng-container *ngIf="(telemetry$ | async) as t; else noData">
-    <ng-container *ngIf="cfg$ | async as cfg">
+  <ng-container *ngIf="(selected$ | async) as selected; else noSelected">
+    <ng-container *ngIf="(telemetry$ | async) as t; else noTelemetry">
+      <ng-container *ngIf="cfg$ | async as cfg">
 
-      <!-- KPI grid (4 cartes sur une ligne desktop) -->
-      <div class="grid">
-        <ng-container *ngFor="let w of cfg.widgets">
-          <ng-container *ngIf="w.enabled">
+        <div class="grid">
+          <ng-container *ngFor="let w of cfg.widgets">
+            <ng-container *ngIf="w.enabled">
 
-            <!-- KPI Battery -->
-            <mat-card
-              *ngIf="w.type === 'kpi-battery'"
-              class="kpi"
-              [class.kpi-battery]="(t?.battery ?? 0) >= cfg.alertThresholds.batteryLow"
-              [class.kpi-battery-low]="(t?.battery ?? 0) < cfg.alertThresholds.batteryLow"
-            >
-              <mat-card-content class="kpi-content">
-                <div class="kpi-left">
-                  <div class="kpi-icon"><mat-icon>battery_full</mat-icon></div>
-                  <div>
-                    <div class="kpi-title">{{ w.title }}</div>
-                    <div class="kpi-sub">Niveau actuel</div>
+              <mat-card
+                *ngIf="w.type === 'kpi-battery'"
+                class="kpi"
+                [class.kpi-battery]="(t?.battery ?? 0) >= cfg.alertThresholds.batteryLow"
+                [class.kpi-battery-low]="(t?.battery ?? 0) < cfg.alertThresholds.batteryLow"
+              >
+                <mat-card-content class="kpi-content">
+                  <div class="kpi-left">
+                    <div class="kpi-icon"><mat-icon>battery_full</mat-icon></div>
+                    <div>
+                      <div class="kpi-title">{{ w.title }}</div>
+                      <div class="kpi-sub">Niveau actuel</div>
+                    </div>
+                  </div>
+                  <div class="kpi-right">
+                    <div class="kpi-value">{{ fmt(t?.battery, 0) }}%</div>
+                  </div>
+                </mat-card-content>
+              </mat-card>
+
+              <mat-card *ngIf="w.type === 'kpi-temp'" class="kpi kpi-temp">
+                <mat-card-content class="kpi-content">
+                  <div class="kpi-left">
+                    <div class="kpi-icon"><mat-icon>device_thermostat</mat-icon></div>
+                    <div>
+                      <div class="kpi-title">{{ w.title }}</div>
+                      <div class="kpi-sub">Capteur interne</div>
+                    </div>
+                  </div>
+                  <div class="kpi-right">
+                    <div class="kpi-value">{{ fmt(t?.temp, 1) }}°C</div>
+                  </div>
+                </mat-card-content>
+              </mat-card>
+
+              <mat-card *ngIf="w.type === 'kpi-rssi'" class="kpi kpi-rssi">
+                <mat-card-content class="kpi-content">
+                  <div class="kpi-left">
+                    <div class="kpi-icon"><mat-icon>network_cell</mat-icon></div>
+                    <div>
+                      <div class="kpi-title">{{ w.title }}</div>
+                      <div class="kpi-sub">Qualité du lien</div>
+                    </div>
+                  </div>
+                  <div class="kpi-right">
+                    <div class="kpi-value">{{ fmt(t?.rssi, 0) }} dBm</div>
+                  </div>
+                </mat-card-content>
+              </mat-card>
+
+              <mat-card *ngIf="w.type === 'kpi-gps'" class="kpi kpi-gps">
+                <mat-card-content class="kpi-content">
+                  <div class="kpi-left">
+                    <div class="kpi-icon"><mat-icon>my_location</mat-icon></div>
+                    <div>
+                      <div class="kpi-title">{{ w.title }}</div>
+                      <div class="kpi-sub">Position</div>
+                    </div>
+                  </div>
+                  <div class="kpi-right">
+                    <div class="kpi-value small">
+                      {{ fmt(t?.lat, 4) }}, {{ fmt(t?.lng, 4) }}
+                    </div>
+                  </div>
+                </mat-card-content>
+              </mat-card>
+
+              <mat-card *ngIf="w.type === 'mini-map'" class="wide miniMapCard">
+                <div class="miniMapHead">
+                  <div class="miniMapTitle">{{ w.title }}</div>
+                  <div class="miniMapHint">
+                    <a routerLink="/map">Ouvrir la carte complète →</a>
                   </div>
                 </div>
-                <div class="kpi-right">
-                  <div class="kpi-value">{{ fmt(t?.battery, 0) }}%</div>
-                </div>
-              </mat-card-content>
-            </mat-card>
 
-            <!-- KPI Temp -->
-            <mat-card *ngIf="w.type === 'kpi-temp'" class="kpi kpi-temp">
-              <mat-card-content class="kpi-content">
-                <div class="kpi-left">
-                  <div class="kpi-icon"><mat-icon>device_thermostat</mat-icon></div>
-                  <div>
-                    <div class="kpi-title">{{ w.title }}</div>
-                    <div class="kpi-sub">Capteur interne</div>
+                <div class="miniMapBody">
+                  <app-mini-map [lat]="t?.lat" [lng]="t?.lng"></app-mini-map>
+                </div>
+              </mat-card>
+
+              <mat-card *ngIf="w.type === 'alerts'" class="wide">
+                <div class="wideHead">
+                  <div class="wideTitle">{{ w.title }}</div>
+                  <a class="link" routerLink="/alerts">Voir tout →</a>
+                </div>
+
+                <mat-card-content>
+                  <div *ngIf="alerts$ | async as a">
+                    <p *ngIf="a.length === 0" class="hint">Aucune alerte.</p>
+
+                    <div
+                      *ngFor="let item of (a | slice:0:3)"
+                      class="alert"
+                      [class.critical]="item.level === 'critical'"
+                      [class.warn]="item.level === 'warn'"
+                    >
+                      <b>{{ item.level }}</b> — {{ item.message }}
+                    </div>
+
+                    <div *ngIf="a.length > 3" class="moreHint">
+                      +{{ a.length - 3 }} autre(s) alerte(s)
+                    </div>
+                  </div>
+                </mat-card-content>
+              </mat-card>
+
+              <mat-card *ngIf="w.type === 'chart-telemetry'" class="wide">
+                <div class="wideHead">
+                  <div class="wideTitle">{{ w.title }}</div>
+                  <div class="miniMapHint">
+                    <span *ngIf="historyLoading">Chargement de l’historique…</span>
+                    <span *ngIf="!historyLoading && historyError">{{ historyError }}</span>
+                    <span *ngIf="!historyLoading && !historyError">Fenêtre: 1 h</span>
                   </div>
                 </div>
-                <div class="kpi-right">
-                  <div class="kpi-value">{{ fmt(t?.temp, 1) }}°C</div>
-                </div>
-              </mat-card-content>
-            </mat-card>
 
-            <!-- KPI RSSI -->
-            <mat-card *ngIf="w.type === 'kpi-rssi'" class="kpi kpi-rssi">
-              <mat-card-content class="kpi-content">
-                <div class="kpi-left">
-                  <div class="kpi-icon"><mat-icon>network_cell</mat-icon></div>
-                  <div>
-                    <div class="kpi-title">{{ w.title }}</div>
-                    <div class="kpi-sub">Qualité du lien</div>
-                  </div>
-                </div>
-                <div class="kpi-right">
-                  <div class="kpi-value">{{ fmt(t?.rssi, 0) }} dBm</div>
-                </div>
-              </mat-card-content>
-            </mat-card>
+                <mat-card-content>
+                  <app-telemetry-chart
+                    [chartType]="cfg.chartType"
+                    [history]="history"
+                    [point]="t"
+                  ></app-telemetry-chart>
+                </mat-card-content>
+              </mat-card>
 
-            <!-- KPI GPS -->
-            <mat-card *ngIf="w.type === 'kpi-gps'" class="kpi kpi-gps">
-              <mat-card-content class="kpi-content">
-                <div class="kpi-left">
-                  <div class="kpi-icon"><mat-icon>my_location</mat-icon></div>
-                  <div>
-                    <div class="kpi-title">{{ w.title }}</div>
-                    <div class="kpi-sub">Position</div>
-                  </div>
-                </div>
-                <div class="kpi-right">
-                  <div class="kpi-value small">
-                    {{ fmt(t?.lat, 4) }}, {{ fmt(t?.lng, 4) }}
-                  </div>
-                </div>
-              </mat-card-content>
-            </mat-card>
-
-            <!-- ✅ Mini map (widget) -->
-            <mat-card *ngIf="w.type === 'mini-map'" class="wide miniMapCard">
-              <div class="miniMapHead">
-                <div class="miniMapTitle">{{ w.title }}</div>
-                <div class="miniMapHint">
-                  <a routerLink="/map">Ouvrir la carte complète →</a>
-                </div>
-              </div>
-
-              <div class="miniMapBody">
-                <app-mini-map [lat]="t?.lat" [lng]="t?.lng"></app-mini-map>
-              </div>
-            </mat-card>
-
-            <!-- Alerts (condensé) -->
-            <mat-card *ngIf="w.type === 'alerts'" class="wide">
-              <div class="wideHead">
-                <div class="wideTitle">{{ w.title }}</div>
-                <a class="link" routerLink="/alerts">Voir tout →</a>
-              </div>
-
-              <mat-card-content>
-                <div *ngIf="alerts$ | async as a">
-                  <p *ngIf="a.length === 0" class="hint">Aucune alerte.</p>
-
-                  <div
-                    *ngFor="let item of (a | slice:0:3)"
-                    class="alert"
-                    [class.critical]="item.level === 'critical'"
-                    [class.warn]="item.level === 'warn'"
-                  >
-                    <b>{{ item.level }}</b> — {{ item.message }}
-                  </div>
-
-                  <div *ngIf="a.length > 3" class="moreHint">
-                    +{{ a.length - 3 }} autre(s) alerte(s)
-                  </div>
-                </div>
-              </mat-card-content>
-            </mat-card>
-
-            <!-- Chart -->
-            <mat-card *ngIf="w.type === 'chart-telemetry'" class="wide">
-              <div class="wideHead">
-                <div class="wideTitle">{{ w.title }}</div>
-                <a class="link" routerLink="/telemetry">Ouvrir télémétrie →</a>
-              </div>
-
-              <mat-card-content>
-                <app-telemetry-chart
-                  [chartType]="cfg.chartType"
-                  [history]="history"
-                  [point]="t"
-                ></app-telemetry-chart>
-              </mat-card-content>
-            </mat-card>
-
+            </ng-container>
           </ng-container>
-        </ng-container>
-      </div>
+        </div>
+      </ng-container>
     </ng-container>
   </ng-container>
 
-  <ng-template #noData>
-    <p>Aucune donnée reçue.</p>
+  <ng-template #noSelected>
+    <mat-card class="cardTable">
+      <mat-card-content>
+        <div class="empty">
+          Aucun appareil sélectionné. Choisis un appareil pour afficher le dashboard.
+        </div>
+      </mat-card-content>
+    </mat-card>
+  </ng-template>
+
+  <ng-template #noTelemetry>
+    <mat-card class="cardTable">
+      <mat-card-content>
+        <div class="empty">
+          Cet appareil est bien sélectionné, mais aucune télémétrie n’est encore disponible.
+          Vérifie l’ingestion backend ou attends le prochain uplink.
+        </div>
+      </mat-card-content>
+    </mat-card>
   </ng-template>
 
 </ng-container>
 
-<!-- Onboarding -->
 <ng-template #noDevices>
   <div class="onboardWrap">
     <mat-card class="onboardHero">

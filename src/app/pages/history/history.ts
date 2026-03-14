@@ -2,14 +2,18 @@ import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import {
   BehaviorSubject,
-  combineLatest,
-  distinctUntilChanged,
   EMPTY,
   Observable,
   Subscription,
+  combineLatest,
+} from 'rxjs';
+import {
+  catchError,
+  distinctUntilChanged,
+  map,
   switchMap,
   tap,
-} from 'rxjs';
+} from 'rxjs/operators';
 
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
@@ -19,6 +23,7 @@ import { MatTableModule } from '@angular/material/table';
 import { TelemetryApiService } from '../../core/api/telemetry-api.service';
 import { TelemetryStoreService } from '../../core/store/telemetry-store.service';
 import { TelemetryPoint } from '../../core/models/telemetry.models';
+import { DeviceStoreService } from '../../core/devices/device-store.service';
 
 type WindowKey = '15m' | '1h' | '6h' | '24h';
 
@@ -37,13 +42,13 @@ type WindowKey = '15m' | '1h' | '6h' | '24h';
 })
 export class HistoryComponent implements OnInit, OnDestroy {
   selected$!: Observable<string | null>;
-
+  hasAnyDevice$!: Observable<boolean>;
 
   windowKey$ = new BehaviorSubject<WindowKey>('1h');
+  reload$ = new BehaviorSubject<number>(0);
 
   loading = false;
   error: string | null = null;
-
   history: TelemetryPoint[] = [];
 
   displayedColumns = ['time', 'temp', 'battery', 'rssi', 'snr', 'latlng'];
@@ -52,28 +57,37 @@ export class HistoryComponent implements OnInit, OnDestroy {
 
   constructor(
     private api: TelemetryApiService,
-    private store: TelemetryStoreService
-  ) {
-    this.selected$ = this.store.selected$;
-  }
+    private store: TelemetryStoreService,
+    private deviceStore: DeviceStoreService
+  ) {}
 
   ngOnInit(): void {
-    // (optionnel) si tu veux être sûr que MQTT est connecté
+    this.selected$ = this.store.selected$;
+    this.hasAnyDevice$ = this.deviceStore.devices$.pipe(
+      map((list) => (list?.length ?? 0) > 0)
+    );
+
+    this.deviceStore.refresh();
     this.store.startFleetPolling(5000);
 
     this.sub.add(
-      combineLatest([this.selected$, this.windowKey$]).pipe(
-        distinctUntilChanged((a, b) => a[0] === b[0] && a[1] === b[1]),
-        switchMap(([eui, win]) => {
-          if (!eui) {
-            this.history = [];
-            this.loading = false;
-            this.error = null;
-            return EMPTY;
-          }
-          return this.loadHistory$(eui, win);
-        })
-      ).subscribe()
+      combineLatest([this.selected$, this.windowKey$, this.reload$])
+        .pipe(
+          distinctUntilChanged(
+            (a, b) => a[0] === b[0] && a[1] === b[1] && a[2] === b[2]
+          ),
+          switchMap(([eui, win]) => {
+            if (!eui) {
+              this.history = [];
+              this.loading = false;
+              this.error = null;
+              return EMPTY;
+            }
+
+            return this.loadHistory$(eui, win);
+          })
+        )
+        .subscribe()
     );
   }
 
@@ -82,12 +96,14 @@ export class HistoryComponent implements OnInit, OnDestroy {
     this.store.stopFleetPolling();
   }
 
-  setWindow(k: WindowKey) {
+  setWindow(k: WindowKey): void {
     this.windowKey$.next(k);
   }
 
-  refresh() {
-    this.windowKey$.next(this.windowKey$.value);
+  refresh(): void {
+    this.deviceStore.refresh();
+    this.store.refreshFleetOnce();
+    this.reload$.next(this.reload$.value + 1);
   }
 
   private loadHistory$(deviceEui: string, windowKey: WindowKey) {
@@ -101,36 +117,47 @@ export class HistoryComponent implements OnInit, OnDestroy {
     return this.api
       .getHistory(deviceEui, { limit, fromTs: fromSec, toTs: nowSec })
       .pipe(
-        tap({
-          next: (res) => {
-            this.history = this.cleanHistory(res?.history ?? []);
-            this.loading = false;
-          },
-          error: (err) => {
-            console.error(err);
-            this.loading = false;
-            this.error = 'Erreur lors du chargement de l’historique';
-            this.history = [];
-          },
+        tap((res) => {
+          this.history = this.cleanHistory(res?.history ?? []);
+          this.loading = false;
+        }),
+        catchError((err) => {
+          console.error(err);
+          this.loading = false;
+          this.error = 'Impossible de charger l’historique pour cet appareil.';
+          this.history = [];
+          return EMPTY;
         })
       );
   }
 
   private windowSeconds(k: WindowKey): number {
     switch (k) {
-      case '15m': return 15 * 60;
-      case '1h': return 60 * 60;
-      case '6h': return 6 * 60 * 60;
-      case '24h': return 24 * 60 * 60;
+      case '15m':
+        return 15 * 60;
+      case '1h':
+        return 60 * 60;
+      case '6h':
+        return 6 * 60 * 60;
+      case '24h':
+        return 24 * 60 * 60;
+      default:
+        return 60 * 60;
     }
   }
 
   private suggestLimit(k: WindowKey): number {
     switch (k) {
-      case '15m': return 300;
-      case '1h': return 800;
-      case '6h': return 2000;
-      case '24h': return 5000;
+      case '15m':
+        return 300;
+      case '1h':
+        return 800;
+      case '6h':
+        return 2000;
+      case '24h':
+        return 5000;
+      default:
+        return 800;
     }
   }
 
@@ -149,7 +176,6 @@ export class HistoryComponent implements OnInit, OnDestroy {
           Number.isFinite(p.lng)
       );
 
-    // pour table: ASC chronologique
     pts.sort((a, b) => a.ts - b.ts);
     return pts;
   }

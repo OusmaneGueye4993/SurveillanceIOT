@@ -1,17 +1,21 @@
 import { Injectable, OnDestroy } from '@angular/core';
 import {
   BehaviorSubject,
-  combineLatest,
-  map,
   Subscription,
   timer,
   forkJoin,
   of,
   catchError,
+  combineLatest,
+  map,
 } from 'rxjs';
 
 import { DashboardSettingsService } from '../settings/dashboard-settings.service';
-import { TelemetryApiService } from '../api/telemetry-api.service';
+import {
+  DevicesListResponse,
+  TelemetryApiService,
+  TelemetryLatestAllResponse,
+} from '../api/telemetry-api.service';
 import { DeviceSummary } from '../models/telemetry.models';
 
 type ConnStatus = 'disconnected' | 'connecting' | 'connected';
@@ -36,15 +40,19 @@ export class TelemetryStoreService implements OnDestroy {
 
   filtered$ = combineLatest([this.devices$, this.search$]).pipe(
     map(([devices, q]) => {
-      const s = (q || '').trim().toLowerCase();
+      const s = String(q || '').trim().toLowerCase();
       if (!s) return devices;
-      return devices.filter((d) => d.device_eui.toLowerCase().includes(s));
+
+      return devices.filter((d) => {
+        const eui = String(d.device_eui || '').toLowerCase();
+        const name = String(d.name || '').toLowerCase();
+        return eui.includes(s) || name.includes(s);
+      });
     })
   );
 
   private sub = new Subscription();
 
-  // polling (ref-count)
   private pollSub: Subscription | null = null;
   private pollRefCount = 0;
   private pollIntervalMs = 5000;
@@ -56,15 +64,17 @@ export class TelemetryStoreService implements OnDestroy {
     this.sub.add(
       this.settings.config$.subscribe((cfg) => {
         const sec = Number(cfg?.alertThresholds?.staleSeconds);
-        if (Number.isFinite(sec) && sec > 0) this.activeTimeoutMs = sec * 1000;
+        if (Number.isFinite(sec) && sec > 0) {
+          this.activeTimeoutMs = sec * 1000;
+        }
       })
     );
   }
 
   startFleetPolling(intervalMs = 5000): void {
     this.pollIntervalMs = intervalMs;
-
     this.pollRefCount += 1;
+
     if (this.pollSub) return;
 
     this.statusSubject.next('connecting');
@@ -76,151 +86,116 @@ export class TelemetryStoreService implements OnDestroy {
 
   stopFleetPolling(): void {
     this.pollRefCount = Math.max(0, this.pollRefCount - 1);
+
     if (this.pollRefCount > 0) return;
 
     if (this.pollSub) {
       this.pollSub.unsubscribe();
       this.pollSub = null;
     }
+
     this.statusSubject.next('disconnected');
   }
 
   refreshFleetOnce(): void {
-
-    // 4) Auto-select si rien de choisi (priorité: device actif backend/local)
-if (!this.selectedSubject.value) {
-  const list = Array.from(this.devicesMap.values());
-
-  // priorité au flag isActive (backend)
-  const backendActive = list.find((x) => x.isActive)?.device_eui;
-
-  // sinon premier online, sinon premier tout court
-  const firstActive = list.find((x) => x.active)?.device_eui;
-  const firstAny = list[0]?.device_eui ?? null;
-
-  this.selectedSubject.next(backendActive ?? firstActive ?? firstAny);
-}
-
     forkJoin({
       devicesRes: this.api.getDevices().pipe(
         catchError((err) => {
           console.error('[Fleet] getDevices failed', err);
-          return of({ devices: [] });
+          return of({ devices: [] } as DevicesListResponse);
         })
       ),
       latestRes: this.api.getLatestAll().pipe(
         catchError((err) => {
           console.error('[Fleet] getLatestAll failed', err);
-          return of({ count: 0, items: [] });
+          return of({ count: 0, items: [] } as TelemetryLatestAllResponse);
         })
       ),
     }).subscribe({
       next: ({ devicesRes, latestRes }) => {
         const nowMs = Date.now();
 
-        // 1) Créer/mettre à jour les devices (même sans telemetry)
+        this.devicesMap.clear();
+
         for (const d of devicesRes.devices || []) {
-          const eui = String(d?.device_eui || '').trim();
+          const eui = String(d?.device_eui || '').trim().toUpperCase();
           if (!eui) continue;
 
-          const prev = this.devicesMap.get(eui);
-          const nextMeta = {
+          this.devicesMap.set(eui, {
+            device_eui: eui,
             name: (d?.name ?? null) as string | null,
-            isActive: (d?.is_active ?? null) as boolean | null,     // ✅ snake -> camel
-            createdAt: (d?.created_at ?? null) as string | null,    // ✅ snake -> camel
-          };
-
-          if (!prev) {
-            this.devicesMap.set(eui, {
-              device_eui: eui,
-              ...nextMeta,
-
-              lastTs: null,
-              lastSeenMs: undefined,
-              lat: null,
-              lng: null,
-              temp: null,
-              battery: null,
-              rssi: null,
-              snr: null,
-              active: false,
-              last: {},
-            });
-          } else {
-            this.devicesMap.set(eui, {
-              ...prev,
-              ...nextMeta,
-            });
-          }
+            isActive: (d?.is_active ?? null) as boolean | null,
+            createdAt: (d?.created_at ?? null) as string | null,
+            lat: null,
+            lng: null,
+            lastTs: null,
+            lastSeenMs: undefined,
+            temp: null,
+            battery: null,
+            rssi: null,
+            snr: null,
+            active: false,
+            last: {},
+          });
         }
 
-        // 2) Appliquer latest points
         for (const p of latestRes.items || []) {
-          const eui = String((p as any)?.device_eui || '').trim();
+          const eui = String((p as any)?.device_eui || '').trim().toUpperCase();
           if (!eui) continue;
 
           const prev = this.devicesMap.get(eui);
-          const lastSeenMs = p.ts ? p.ts * 1000 : nowMs;
+
+          const lastTs = Number.isFinite(Number(p.ts)) ? Number(p.ts) : null;
+          const lastSeenMs = lastTs ? lastTs * 1000 : undefined;
+          const lat = Number.isFinite(Number(p.lat)) ? Number(p.lat) : null;
+          const lng = Number.isFinite(Number(p.lng)) ? Number(p.lng) : null;
 
           const next: DeviceSummary = {
             device_eui: eui,
-
-            // garder metadata si déjà connue
             name: prev?.name ?? null,
             isActive: prev?.isActive ?? null,
             createdAt: prev?.createdAt ?? null,
 
-            lastTs: p.ts ?? prev?.lastTs ?? null,
+            lat,
+            lng,
+            lastTs,
             lastSeenMs,
-
-            // ⚠️ FleetMap lit d.last.lat/lng
-            lat: Number.isFinite(p.lat) ? p.lat : prev?.lat ?? null,
-            lng: Number.isFinite(p.lng) ? p.lng : prev?.lng ?? null,
 
             temp: p.temp ?? prev?.temp ?? null,
             battery: p.battery ?? prev?.battery ?? null,
             rssi: p.rssi ?? prev?.rssi ?? null,
             snr: p.snr ?? prev?.snr ?? null,
 
-            active: true, // recalcul ensuite
+            active: false,
             last: {
-              ts: p.ts,
-              lat: p.lat as any,
-              lng: p.lng as any,
+              ts: lastTs ?? undefined,
+              lat: lat ?? undefined,
+              lng: lng ?? undefined,
               temp: p.temp ?? null,
               battery: p.battery ?? null,
               rssi: p.rssi ?? null,
+              snr: p.snr ?? null,
             },
           };
 
           this.devicesMap.set(eui, next);
         }
 
-        // 3) Recalcul active/inactive (basé sur lastSeenMs)
         for (const [eui, d] of this.devicesMap.entries()) {
-          const lastSeen = d.lastSeenMs ?? null;
           const active =
-            lastSeen != null ? nowMs - lastSeen <= this.activeTimeoutMs : false;
+            d.lastSeenMs != null ? nowMs - d.lastSeenMs <= this.activeTimeoutMs : false;
 
-          if (active !== d.active) {
-            this.devicesMap.set(eui, { ...d, active });
-          }
-        }
-
-        // 4) Auto-select si rien de choisi
-        if (!this.selectedSubject.value) {
-          const list = Array.from(this.devicesMap.values());
-          const firstActive = list.find((x) => x.active);
-          const firstAny = list[0];
-          this.selectedSubject.next((firstActive ?? firstAny)?.device_eui ?? null);
+          this.devicesMap.set(eui, {
+            ...d,
+            active,
+          });
         }
 
         this.emitDevices();
+        this.syncSelectedWithDevices();
 
-        const ok =
-          (devicesRes.devices?.length ?? 0) > 0 ||
-          (latestRes.items?.length ?? 0) > 0;
-        this.statusSubject.next(ok ? 'connected' : 'disconnected');
+        const hasAnyDevices = this.devicesMap.size > 0;
+        this.statusSubject.next(hasAnyDevices ? 'connected' : 'disconnected');
       },
       error: (err) => {
         console.error('[Fleet] refresh failed', err);
@@ -234,20 +209,45 @@ if (!this.selectedSubject.value) {
   }
 
   select(eui: string): void {
-    if (!eui) return;
-    this.selectedSubject.next(eui);
+    const next = String(eui || '').trim().toUpperCase();
+    if (!next) return;
+    this.selectedSubject.next(next);
+  }
+
+  private syncSelectedWithDevices(): void {
+    const list = Array.from(this.devicesMap.values());
+    const current = this.selectedSubject.value;
+
+    if (current && list.some((d) => d.device_eui === current)) {
+      return;
+    }
+
+    const backendActive = list.find((d) => d.isActive)?.device_eui ?? null;
+    const firstOnline = list.find((d) => d.active)?.device_eui ?? null;
+    const firstAny = list[0]?.device_eui ?? null;
+
+    this.selectedSubject.next(backendActive ?? firstOnline ?? firstAny);
   }
 
   private emitDevices(): void {
     const arr = Array.from(this.devicesMap.values()).sort((a, b) => {
+      const aBackend = !!a.isActive;
+      const bBackend = !!b.isActive;
+
+      if (aBackend !== bBackend) return aBackend ? -1 : 1;
       if (a.active !== b.active) return a.active ? -1 : 1;
+
       return (b.lastSeenMs ?? 0) - (a.lastSeenMs ?? 0);
     });
+
     this.devicesSubject.next(arr);
   }
 
   ngOnDestroy(): void {
     this.sub.unsubscribe();
-    if (this.pollSub) this.pollSub.unsubscribe();
+
+    if (this.pollSub) {
+      this.pollSub.unsubscribe();
+    }
   }
 }

@@ -3,7 +3,7 @@
     <div class="titleBlock">
       <h2>Historique</h2>
       <div class="sub">
-        Points télémétrie (fenêtre + table)
+        Points télémétrie de l’appareil sélectionné
       </div>
     </div>
 
@@ -27,47 +27,75 @@
     <mat-card-title>Table des points</mat-card-title>
 
     <mat-card-content>
-      <div class="state" *ngIf="loading">Chargement…</div>
-      <div class="state error" *ngIf="!loading && error">{{ error }}</div>
-      <div class="state empty" *ngIf="!loading && !error && history.length === 0">
-        Aucun point dans cette fenêtre.
-      </div>
+      <ng-container *ngIf="(hasAnyDevice$ | async) === true; else noDevices">
+        <ng-container *ngIf="(selected$ | async) as selected; else noSelection">
 
-      <table mat-table [dataSource]="history" class="table" *ngIf="!loading && !error && history.length > 0">
+          <div class="state" *ngIf="loading">Chargement…</div>
 
-        <ng-container matColumnDef="time">
-          <th mat-header-cell *matHeaderCellDef>Date</th>
-          <td mat-cell *matCellDef="let p">{{ fmtTime(p.ts) }}</td>
+          <div class="state error" *ngIf="!loading && error">
+            {{ error }}
+          </div>
+
+          <div class="state empty" *ngIf="!loading && !error && history.length === 0">
+            Aucune télémétrie disponible pour l’appareil <b>{{ selected }}</b> dans cette fenêtre.
+          </div>
+
+          <table
+            mat-table
+            [dataSource]="history"
+            class="table"
+            *ngIf="!loading && !error && history.length > 0"
+          >
+            <ng-container matColumnDef="time">
+              <th mat-header-cell *matHeaderCellDef>Date</th>
+              <td mat-cell *matCellDef="let p">{{ fmtTime(p.ts) }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="temp">
+              <th mat-header-cell *matHeaderCellDef>Temp (°C)</th>
+              <td mat-cell *matCellDef="let p">{{ fmt(p.temp, 1) }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="battery">
+              <th mat-header-cell *matHeaderCellDef>Bat (%)</th>
+              <td mat-cell *matCellDef="let p">{{ fmt(p.battery, 0) }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="rssi">
+              <th mat-header-cell *matHeaderCellDef>RSSI</th>
+              <td mat-cell *matCellDef="let p">{{ fmt(p.rssi, 0) }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="snr">
+              <th mat-header-cell *matHeaderCellDef>SNR</th>
+              <td mat-cell *matCellDef="let p">{{ fmt(p.snr, 1) }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="latlng">
+              <th mat-header-cell *matHeaderCellDef>Position</th>
+              <td mat-cell *matCellDef="let p">
+                {{ fmt(p.lat, 5) }}, {{ fmt(p.lng, 5) }}
+              </td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+            <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+          </table>
+
         </ng-container>
+      </ng-container>
 
-        <ng-container matColumnDef="temp">
-          <th mat-header-cell *matHeaderCellDef>Temp (°C)</th>
-          <td mat-cell *matCellDef="let p">{{ fmt(p.temp, 1) }}</td>
-        </ng-container>
+      <ng-template #noDevices>
+        <div class="state empty">
+          Aucun appareil enregistré. Ajoute un appareil depuis la page Devices avant de consulter l’historique.
+        </div>
+      </ng-template>
 
-        <ng-container matColumnDef="battery">
-          <th mat-header-cell *matHeaderCellDef>Bat (%)</th>
-          <td mat-cell *matCellDef="let p">{{ fmt(p.battery, 0) }}</td>
-        </ng-container>
-
-        <ng-container matColumnDef="rssi">
-          <th mat-header-cell *matHeaderCellDef>RSSI</th>
-          <td mat-cell *matCellDef="let p">{{ fmt(p.rssi, 0) }}</td>
-        </ng-container>
-
-        <ng-container matColumnDef="snr">
-          <th mat-header-cell *matHeaderCellDef>SNR</th>
-          <td mat-cell *matCellDef="let p">{{ fmt(p.snr, 1) }}</td>
-        </ng-container>
-
-        <ng-container matColumnDef="latlng">
-          <th mat-header-cell *matHeaderCellDef>Position</th>
-          <td mat-cell *matCellDef="let p">{{ fmt(p.lat, 5) }}, {{ fmt(p.lng, 5) }}</td>
-        </ng-container>
-
-        <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-        <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
-      </table>
+      <ng-template #noSelection>
+        <div class="state empty">
+          Aucun appareil sélectionné. Choisis un appareil actif pour afficher son historique.
+        </div>
+      </ng-template>
     </mat-card-content>
   </mat-card>
 </div>

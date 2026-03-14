@@ -23,9 +23,19 @@ export class DeviceStoreService {
 
   constructor(private api: DeviceService, private active: ActiveDeviceService) {}
 
-  /** Snapshot utile pour savoir si c'était le 1er device / si un actif existait */
   getSnapshot(): Device[] {
     return this.devicesSubject.value;
+  }
+
+  private normalizeDevices(devices: Device[]): Device[] {
+    return (devices || []).map((d) => ({
+      ...d,
+      device_eui: String(d.device_eui || '').trim().toUpperCase(),
+      name: d.name ?? null,
+      description: d.description ?? null,
+      is_active: !!d.is_active,
+      created_at: d.created_at ?? undefined,
+    }));
   }
 
   refresh(): void {
@@ -35,105 +45,89 @@ export class DeviceStoreService {
     this.api
       .listMyDevices()
       .pipe(
-        map((devices) =>
-          (devices || []).map((d) => ({
-            ...d,
-            device_eui: String(d.device_eui || '').toUpperCase(),
-          }))
-        ),
+        map((devices) => this.normalizeDevices(devices)),
         tap((normalized) => {
           this.devicesSubject.next(normalized);
           this.active.syncFromDevices(normalized);
         }),
-        finalize(() => this.loadingSubject.next(false)),
         catchError((e) => {
           this.errorSubject.next(e?.error?.detail || 'Impossible de charger les appareils.');
+          this.devicesSubject.next([]);
           return of([] as Device[]);
-        })
+        }),
+        finalize(() => this.loadingSubject.next(false))
       )
       .subscribe();
   }
 
-  /** ✅ Nouveau: ajout + refresh + auto-active si besoin */
-addDevice(
-  payload: { device_eui: string; name?: string; description?: string; claim_code?: string },
-  opts?: { autoSetActiveIfNone?: boolean }
-) {
-  this.loadingSubject.next(true);
-  this.errorSubject.next(null);
+  addDevice(
+    payload: { device_eui: string; name?: string; description?: string; claim_code?: string },
+    opts?: AddOptions
+  ): Observable<void> {
+    this.loadingSubject.next(true);
+    this.errorSubject.next(null);
 
-  const before = this.getSnapshot();
-  const hadActiveBefore = before.some((d) => !!d.is_active);
+    const before = this.getSnapshot();
+    const hadActiveBefore = before.some((d) => !!d.is_active);
 
-  const body = {
-    ...payload,
-    device_eui: String(payload.device_eui || '').trim().toUpperCase(),
-    name: (payload.name || '').trim(),
-    description: (payload.description || '').trim(),
-    claim_code: String(payload.claim_code || '').trim().toUpperCase(),
-  };
+    const body = {
+      ...payload,
+      device_eui: String(payload.device_eui || '').trim().toUpperCase(),
+      name: String(payload.name || '').trim(),
+      description: String(payload.description || '').trim(),
+      claim_code: String(payload.claim_code || '').trim().toUpperCase(),
+    };
 
-  return this.api.addMyDevice(body).pipe(
-    switchMap((created) => {
-      const createdEui = String(created?.device_eui || body.device_eui).toUpperCase();
+    return this.api.addMyDevice(body).pipe(
+      switchMap((created) => {
+        const createdEui = String(created?.device_eui || body.device_eui).trim().toUpperCase();
 
-      if (opts?.autoSetActiveIfNone && !hadActiveBefore) {
-        return this.api.setActive(createdEui).pipe(map(() => createdEui));
-      }
-      return of(createdEui);
-    }),
-    switchMap(() => this.api.listMyDevices()),
-    map((devices) =>
-      (devices || []).map((d) => ({
-        ...d,
-        device_eui: String(d.device_eui || '').toUpperCase(),
-      }))
-    ),
-    tap((normalized) => {
-      this.devicesSubject.next(normalized);
-      this.active.syncFromDevices(normalized);
-    }),
-    map(() => void 0),
-    finalize(() => this.loadingSubject.next(false)),
-    catchError((e) => {
-      const msg =
-        e?.error?.detail ||
-        e?.error?.claim_code?.[0] ||
-        e?.error?.device_eui?.[0] ||
-        'Ajout impossible.';
-      this.errorSubject.next(msg);
-      return throwError(() => e);
-    })
-  );
-}
+        if (opts?.autoSetActiveIfNone && !hadActiveBefore) {
+          return this.api.setActive(createdEui).pipe(map(() => createdEui));
+        }
+
+        return of(createdEui);
+      }),
+      switchMap(() => this.api.listMyDevices()),
+      map((devices) => this.normalizeDevices(devices)),
+      tap((normalized) => {
+        this.devicesSubject.next(normalized);
+        this.active.syncFromDevices(normalized);
+      }),
+      map(() => void 0),
+      catchError((e) => {
+        const msg =
+          e?.error?.detail ||
+          e?.error?.claim_code?.[0] ||
+          e?.error?.device_eui?.[0] ||
+          'Ajout impossible.';
+        this.errorSubject.next(msg);
+        return throwError(() => e);
+      }),
+      finalize(() => this.loadingSubject.next(false))
+    );
+  }
 
   delete(deviceEui: string): void {
     this.loadingSubject.next(true);
     this.errorSubject.next(null);
 
-    const target = String(deviceEui || '').toUpperCase();
+    const target = String(deviceEui || '').trim().toUpperCase();
 
     this.api
       .deleteMyDevice(target)
       .pipe(
         switchMap(() => this.api.listMyDevices()),
-        map((devices) =>
-          (devices || []).map((d) => ({
-            ...d,
-            device_eui: String(d.device_eui || '').toUpperCase(),
-          }))
-        ),
+        map((devices) => this.normalizeDevices(devices)),
         tap((normalized) => {
-          // si on supprime l'actif -> la sync reset proprement
           this.devicesSubject.next(normalized);
           this.active.syncFromDevices(normalized);
         }),
-        finalize(() => this.loadingSubject.next(false)),
         catchError((e) => {
-          this.loadingSubject.next(false);
           this.errorSubject.next(e?.error?.detail || 'Suppression impossible.');
           return of([] as Device[]);
-        })
+        }),
+        finalize(() => this.loadingSubject.next(false))
       )
       .subscribe();
   }
@@ -142,28 +136,22 @@ addDevice(
     this.loadingSubject.next(true);
     this.errorSubject.next(null);
 
-    const target = String(deviceEui || '').toUpperCase();
+    const target = String(deviceEui || '').trim().toUpperCase();
 
     this.api
       .setActive(target)
       .pipe(
         switchMap(() => this.api.listMyDevices()),
-        map((devices) =>
-          (devices || []).map((d) => ({
-            ...d,
-            device_eui: String(d.device_eui || '').toUpperCase(),
-          }))
-        ),
+        map((devices) => this.normalizeDevices(devices)),
         tap((normalized) => {
           this.devicesSubject.next(normalized);
           this.active.syncFromDevices(normalized);
         }),
-        finalize(() => this.loadingSubject.next(false)),
         catchError((e) => {
-          this.loadingSubject.next(false);
           this.errorSubject.next(e?.error?.detail || 'Impossible de définir l’appareil actif.');
           return of([] as Device[]);
-        })
+        }),
+        finalize(() => this.loadingSubject.next(false))
       )
       .subscribe();
   }
