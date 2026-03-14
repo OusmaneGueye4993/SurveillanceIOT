@@ -3,4 +3,59 @@
   width: 100%;
   border-radius: 14px;
   overflow: hidden;
+  background: #f5f6f7;
+}
+
+/* Leaflet */
+.leaflet-container {
+  background: #f5f6f7;
+}
+
+/* Empêche les styles Leaflet par défaut sur DivIcon */
+.leaflet-marker-icon,
+.leaflet-marker-shadow {
+  background: transparent !important;
+  border: none !important;
+}
+
+/* === Marqueur SaaS (vert) === */
+.saas-marker {
+  background: transparent !important;
+  border: none !important;
+}
+
+.saas-marker__dot {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 12px;
+  height: 12px;
+  transform: translate(-50%, -50%);
+  border-radius: 999px;
+  background: #1f6f4a; /* ton vert brand */
+  border: 2px solid rgba(255, 255, 255, 0.95);
+  box-shadow: 0 0 0 6px rgba(31, 111, 74, 0.18);
+}
+
+.saas-marker__pulse {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 18px;
+  height: 18px;
+  transform: translate(-50%, -50%);
+  border-radius: 999px;
+  background: rgba(31, 111, 74, 0.14);
+  animation: saasPulse 1.6s ease-out infinite;
+}
+
+@keyframes saasPulse {
+  0% {
+    transform: translate(-50%, -50%) scale(0.85);
+    opacity: 0.9;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1.35);
+    opacity: 0;
+  }
 }
