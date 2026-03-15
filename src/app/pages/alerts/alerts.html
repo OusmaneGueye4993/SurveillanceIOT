@@ -1,1 +1,89 @@
-<p>alerts works!</p>
+<div class="page">
+  <div class="header">
+    <div>
+      <h2>Alertes</h2>
+      <p>Résumé lisible de l’état du système et des anomalies détectées.</p>
+    </div>
+
+    <div class="actions">
+      <button mat-stroked-button (click)="refresh()">
+        <mat-icon>refresh</mat-icon>
+        Rafraîchir
+      </button>
+    </div>
+  </div>
+
+  <div class="summaryGrid">
+    <mat-card class="summaryCard critical">
+      <div class="summaryLabel">Critiques</div>
+      <div class="summaryValue">{{ (criticalCount$ | async) ?? 0 }}</div>
+    </mat-card>
+
+    <mat-card class="summaryCard warn">
+      <div class="summaryLabel">Avertissements</div>
+      <div class="summaryValue">{{ (warnCount$ | async) ?? 0 }}</div>
+    </mat-card>
+
+    <mat-card class="summaryCard info">
+      <div class="summaryLabel">Informations</div>
+      <div class="summaryValue">{{ (infoCount$ | async) ?? 0 }}</div>
+    </mat-card>
+  </div>
+
+  <mat-card class="card">
+    <ng-container *ngIf="(hasAnyDevice$ | async) === true; else noDevices">
+      <div class="selectedHint" *ngIf="(selected$ | async) as selected">
+        Appareil de référence : <b>{{ selected }}</b>
+      </div>
+
+      <ng-container *ngIf="(alerts$ | async) as alerts">
+        <div class="alertList" *ngIf="alerts.length > 0; else emptyAlerts">
+          <div
+            class="alertItem"
+            *ngFor="let item of alerts; trackBy: trackById"
+            [class.critical]="item.level === 'critical'"
+            [class.warn]="item.level === 'warn'"
+            [class.info]="item.level === 'info'"
+          >
+            <div class="iconWrap">
+              <mat-icon>{{ levelIcon(item.level) }}</mat-icon>
+            </div>
+
+            <div class="content">
+              <div class="topRow">
+                <div class="title">{{ item.title }}</div>
+                <div class="badge">{{ levelLabel(item.level) }}</div>
+              </div>
+
+              <div class="message">{{ item.message }}</div>
+
+              <div class="meta" *ngIf="item.deviceEui">
+                Device : <b>{{ item.deviceEui }}</b>
+              </div>
+            </div>
+          </div>
+        </div>
+      </ng-container>
+    </ng-container>
+
+    <ng-template #emptyAlerts>
+      <div class="empty">
+        <mat-icon class="emptyIcon">verified</mat-icon>
+        <div class="emptyTitle">Aucune alerte bloquante</div>
+        <div class="emptyMsg">
+          Le système ne remonte actuellement aucune anomalie majeure.
+        </div>
+      </div>
+    </ng-template>
+
+    <ng-template #noDevices>
+      <div class="empty">
+        <mat-icon class="emptyIcon">devices_other</mat-icon>
+        <div class="emptyTitle">Aucun appareil enregistré</div>
+        <div class="emptyMsg">
+          Ajoute un appareil depuis la page Devices pour activer la surveillance et les alertes.
+        </div>
+      </div>
+    </ng-template>
+  </mat-card>
+</div>

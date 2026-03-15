@@ -1,10 +1,10 @@
 import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { map } from 'rxjs/operators';
 
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTableModule } from '@angular/material/table';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatCardModule } from '@angular/material/card';
 import { MatChipsModule } from '@angular/material/chips';
@@ -22,7 +22,6 @@ import { ConfirmDeleteDialogComponent } from './confirm-delete-dialog';
     MatButtonModule,
     MatIconModule,
     MatTableModule,
-    MatProgressSpinnerModule,
     MatProgressBarModule,
     MatCardModule,
     MatChipsModule,
@@ -39,7 +38,11 @@ export class DevicesComponent {
   loading$ = this.store.loading$;
   error$ = this.store.error$;
 
-  // ✅ requis par ton mat-table
+  hasAnyDevice$ = this.devices$.pipe(map((devices) => devices.length > 0));
+  activeDevice$ = this.devices$.pipe(
+    map((devices) => devices.find((d) => !!d.is_active) ?? null)
+  );
+
   displayedColumns: string[] = ['name', 'device_eui', 'status', 'actions'];
 
   ngOnInit() {
@@ -66,5 +69,9 @@ export class DevicesComponent {
         this.store.delete(d.device_eui);
       }
     });
+  }
+
+  trackByEui(_: number, d: any): string {
+    return d?.device_eui ?? _;
   }
 }
