@@ -1,26 +1,34 @@
-import { CanActivateFn, CanActivateChildFn, Router } from '@angular/router';
+import { CanActivateChildFn, CanActivateFn, Router } from '@angular/router';
 import { inject } from '@angular/core';
+import { map, of } from 'rxjs';
 import { AuthService } from './auth.service';
 
-function hasSession(): boolean {
-  const auth = inject(AuthService);
-  return auth.isAuthenticated() || auth.hasUsableRefreshToken();
-}
-
 export const authGuard: CanActivateChildFn = () => {
+  const auth = inject(AuthService);
   const router = inject(Router);
 
-  if (hasSession()) return true;
+  if (auth.isAuthenticated()) {
+    return true;
+  }
 
-  router.navigateByUrl('/login');
-  return false;
+  return auth.restoreSession().pipe(
+    map((ok) => (ok ? true : router.createUrlTree(['/login'])))
+  );
 };
 
 export const publicOnlyGuard: CanActivateFn = () => {
+  const auth = inject(AuthService);
   const router = inject(Router);
 
-  if (!hasSession()) return true;
+  if (auth.isAuthenticated()) {
+    return router.createUrlTree(['/dashboard']);
+  }
 
-  router.navigateByUrl('/dashboard');
-  return false;
+  if (!auth.hasUsableRefreshToken()) {
+    return true;
+  }
+
+  return auth.restoreSession().pipe(
+    map((ok) => (ok ? router.createUrlTree(['/dashboard']) : true))
+  );
 };

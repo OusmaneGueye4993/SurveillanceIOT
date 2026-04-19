@@ -39,7 +39,7 @@ export class DeviceService {
   }
 
   setActive(deviceEui: string): Observable<Device> {
-    return this.http.post<Device>(
+    return this.http.patch<Device>(
       `${this.base}/v1/me/devices/${encodeURIComponent(deviceEui)}/active/`,
       {}
     );

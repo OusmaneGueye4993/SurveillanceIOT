@@ -38,25 +38,48 @@
           "configurations": {
             "production": {
               "budgets": [
-  { "type": "initial", "maximumWarning": "4mb", "maximumError": "5mb" },
-  { "type": "anyComponentStyle", "maximumWarning": "10kb", "maximumError": "20kb" }
-],
-        "outputHashing": "all"
+                {
+                  "type": "initial",
+                  "maximumWarning": "4mb",
+                  "maximumError": "5mb"
+                },
+                {
+                  "type": "anyComponentStyle",
+                  "maximumWarning": "10kb",
+                  "maximumError": "20kb"
+                }
+              ],
+              "outputHashing": "all",
+              "optimization": {
+                "scripts": true,
+                "styles": true,
+                "fonts": false
+              }
             },
             "development": {
-              "optimization": false,
+              "optimization": {
+                "scripts": false,
+                "styles": false,
+                "fonts": false
+              },
               "extractLicenses": false,
               "sourceMap": true,
-              "outputHashing": "none" 
+              "outputHashing": "none"
             }
           },
-          "defaultConfiguration": "production"
+          "defaultConfiguration": "development"
         },
         "serve": {
           "builder": "@angular-devkit/build-angular:dev-server",
-          "options": {
-            "buildTarget": "drone-surveillance:build"
-          }
+          "configurations": {
+            "production": {
+              "buildTarget": "drone-surveillance:build:production"
+            },
+            "development": {
+              "buildTarget": "drone-surveillance:build:development"
+            }
+          },
+          "defaultConfiguration": "development"
         },
         "test": {
           "builder": "@angular/build:unit-test"

@@ -1,20 +1,70 @@
 <div class="authPage">
+  <div
+    class="toast"
+    *ngIf="toastVisible"
+    [ngClass]="{
+      'toast-success': toastType === 'success',
+      'toast-error': toastType === 'error',
+      'toast-info': toastType === 'info'
+    }"
+  >
+    <div class="toastAccent"></div>
+
+    <div class="toastLeft">
+      <mat-icon *ngIf="toastType === 'success'">check_circle</mat-icon>
+      <mat-icon *ngIf="toastType === 'error'">error</mat-icon>
+      <mat-icon *ngIf="toastType === 'info'">info</mat-icon>
+    </div>
+
+    <div class="toastContent">
+      <div class="toastTitle">
+        {{
+          toastType === 'success'
+            ? 'Succès'
+            : toastType === 'error'
+            ? 'Erreur'
+            : 'Information'
+        }}
+      </div>
+      <div class="toastMessage">{{ toastMessage }}</div>
+      <div class="toastProgress"></div>
+    </div>
+
+    <button type="button" class="toastClose" (click)="closeToast()">
+      <mat-icon>close</mat-icon>
+    </button>
+  </div>
+
+  <div class="bgOrb orb1"></div>
+  <div class="bgOrb orb2"></div>
+  <div class="bgGrid"></div>
+
   <mat-card class="authCard">
-    <div class="cardGlow"></div>
+    <div class="cardTopGlow"></div>
 
     <div class="brand">
-      <div class="logo">IoT</div>
+      <div class="logoWrap">
+        <div class="logoRing"></div>
+        <div class="logo">IoT</div>
+      </div>
+
       <div class="txt">
+        <div class="eyebrow">Environment Surveillance</div>
         <div class="title">Connexion</div>
-        <div class="sub">Accède à ton dashboard et gère tes appareils</div>
+        <div class="sub">Accède à ton dashboard et gère tes appareils intelligents</div>
       </div>
     </div>
 
     <form [formGroup]="form" (ngSubmit)="submit()" class="form">
-      <mat-form-field appearance="outline" class="full">
+      <mat-form-field appearance="outline" class="full glassField">
         <mat-label>Email</mat-label>
         <mat-icon matPrefix>alternate_email</mat-icon>
-        <input matInput formControlName="email" autocomplete="email" placeholder="ex: user@iot.com" />
+        <input
+          matInput
+          formControlName="email"
+          autocomplete="email"
+          placeholder="ex: user@iot.com"
+        />
         <mat-error *ngIf="form.get('email')?.touched && form.get('email')?.hasError('required')">
           Email obligatoire
         </mat-error>
@@ -23,7 +73,7 @@
         </mat-error>
       </mat-form-field>
 
-      <mat-form-field appearance="outline" class="full">
+      <mat-form-field appearance="outline" class="full glassField">
         <mat-label>Mot de passe</mat-label>
         <mat-icon matPrefix>lock</mat-icon>
         <input
@@ -33,7 +83,13 @@
           autocomplete="current-password"
           placeholder="••••••••"
         />
-        <button type="button" mat-icon-button matSuffix (click)="hide = !hide" aria-label="Afficher le mot de passe">
+        <button
+          type="button"
+          mat-icon-button
+          matSuffix
+          (click)="hide = !hide"
+          aria-label="Afficher le mot de passe"
+        >
           <mat-icon>{{ hide ? 'visibility' : 'visibility_off' }}</mat-icon>
         </button>
 
@@ -42,14 +98,20 @@
         </mat-error>
       </mat-form-field>
 
-      <div class="errorBox" *ngIf="error">
-        <mat-icon>error_outline</mat-icon>
-        <div class="errText">{{ error }}</div>
+      <div class="infoBox">
+        <div class="infoIcon">
+          <mat-icon>info</mat-icon>
+        </div>
+        <div class="infoText">
+          Après connexion, tu seras redirigé automatiquement vers
+          <strong>Dashboard</strong> ou <strong>Devices</strong> selon ton état.
+        </div>
       </div>
 
       <button mat-raised-button class="primaryBtn" type="submit" [disabled]="loading">
-        <mat-icon>login</mat-icon>
-        <span>{{ loading ? 'Connexion…' : 'Se connecter' }}</span>
+        <span class="btnGlow"></span>
+        <mat-icon>{{ loading ? 'hourglass_top' : 'login' }}</mat-icon>
+        <span>{{ loading ? 'Connexion...' : 'Se connecter' }}</span>
       </button>
 
       <div class="divider">
@@ -59,7 +121,7 @@
       </div>
 
       <a class="linkBtn" routerLink="/register">
-        Créer un compte
+        <span>Créer un compte</span>
         <mat-icon>arrow_forward</mat-icon>
       </a>
     </form>

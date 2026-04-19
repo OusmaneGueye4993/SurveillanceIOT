@@ -20,6 +20,7 @@ function isAuthEndpoint(url: string): boolean {
 
 function addBearer(req: HttpRequest<any>, access: string | null): HttpRequest<any> {
   if (!access) return req;
+
   return req.clone({
     setHeaders: {
       Authorization: `Bearer ${access}`,

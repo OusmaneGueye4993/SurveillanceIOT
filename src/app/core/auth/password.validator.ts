@@ -1,14 +1,9 @@
-import { AbstractControl, ValidationErrors } from '@angular/forms';
+import { AbstractControl, ValidationErrors, ValidatorFn } from '@angular/forms';
 
-/**
- * Mot de passe "pro" :
- * - >= 8 caractères
- * - au moins 1 minuscule, 1 majuscule, 1 chiffre
- */
 export function strongPasswordValidator(control: AbstractControl): ValidationErrors | null {
   const value = String(control.value ?? '');
 
-  if (!value) return null; // le required gère déjà le vide
+  if (!value) return null;
 
   const okLength = value.length >= 8;
   const hasLower = /[a-z]/.test(value);
@@ -18,4 +13,20 @@ export function strongPasswordValidator(control: AbstractControl): ValidationErr
   return okLength && hasLower && hasUpper && hasDigit
     ? null
     : { strongPassword: true };
+}
+
+export function passwordMatchValidator(
+  passwordKey: string,
+  confirmPasswordKey: string
+): ValidatorFn {
+  return (group: AbstractControl): ValidationErrors | null => {
+    const password = group.get(passwordKey)?.value ?? '';
+    const confirmPassword = group.get(confirmPasswordKey)?.value ?? '';
+
+    if (!password || !confirmPassword) {
+      return null;
+    }
+
+    return password === confirmPassword ? null : { passwordMismatch: true };
+  };
 }

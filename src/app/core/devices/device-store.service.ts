@@ -125,7 +125,7 @@ export class DeviceStoreService {
         }),
         catchError((e) => {
           this.errorSubject.next(e?.error?.detail || 'Suppression impossible.');
-          return of([] as Device[]);
+          return of(this.getSnapshot());
         }),
         finalize(() => this.loadingSubject.next(false))
       )
@@ -149,7 +149,7 @@ export class DeviceStoreService {
         }),
         catchError((e) => {
           this.errorSubject.next(e?.error?.detail || 'Impossible de définir l’appareil actif.');
-          return of([] as Device[]);
+          return of(this.getSnapshot());
         }),
         finalize(() => this.loadingSubject.next(false))
       )

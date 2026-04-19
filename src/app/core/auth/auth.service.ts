@@ -1,7 +1,17 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
-import { BehaviorSubject, Observable, switchMap, tap } from 'rxjs';
+import {
+  BehaviorSubject,
+  Observable,
+  catchError,
+  finalize,
+  map,
+  of,
+  shareReplay,
+  switchMap,
+  tap,
+} from 'rxjs';
 
 type Tokens = { access: string; refresh: string };
 type RefreshResponse = { access: string; refresh?: string };
@@ -28,6 +38,8 @@ export class AuthService {
   private userSubject = new BehaviorSubject<JwtPayload | null>(this.getUserFromToken());
   user$ = this.userSubject.asObservable();
 
+  private restoreInFlight$: Observable<boolean> | null = null;
+
   constructor(private http: HttpClient) {}
 
   getAccessToken(): string | null {
@@ -36,6 +48,10 @@ export class AuthService {
 
   getRefreshToken(): string | null {
     return localStorage.getItem(REFRESH_KEY);
+  }
+
+  private normalizeEmail(value: string): string {
+    return String(value || '').trim().toLowerCase();
   }
 
   private setTokens(tokens: Tokens | RefreshResponse): void {
@@ -107,8 +123,35 @@ export class AuthService {
     return !!refresh && !this.isJwtExpired(refresh);
   }
 
+  restoreSession(): Observable<boolean> {
+    if (this.isAuthenticated()) {
+      return of(true);
+    }
+
+    if (!this.hasUsableRefreshToken()) {
+      this.clearTokens();
+      return of(false);
+    }
+
+    if (!this.restoreInFlight$) {
+      this.restoreInFlight$ = this.refreshAccess().pipe(
+        map(() => true),
+        catchError(() => {
+          this.logout();
+          return of(false);
+        }),
+        shareReplay(1),
+        finalize(() => {
+          this.restoreInFlight$ = null;
+        })
+      );
+    }
+
+    return this.restoreInFlight$;
+  }
+
   login(email: string, password: string): Observable<Tokens> {
-    const username = String(email || '').trim().toLowerCase();
+    const username = this.normalizeEmail(email);
 
     return this.http
       .post<Tokens>(`${this.base}/v1/auth/login/`, { username, password })
@@ -117,37 +160,35 @@ export class AuthService {
 
   refreshAccess(): Observable<RefreshResponse> {
     const refresh = this.getRefreshToken();
+
     if (!refresh) {
       throw new Error('No refresh token');
     }
 
     return this.http
       .post<RefreshResponse>(`${this.base}/v1/auth/refresh/`, { refresh })
-      .pipe(
-        tap((res) => {
-          this.setTokens(res);
-        })
-      );
+      .pipe(tap((res) => this.setTokens(res)));
   }
 
   logout(): void {
     this.clearTokens();
   }
 
-  register(email: string, password: string): Observable<{ id: number; username: string }> {
-    const cleanEmail = String(email || '').trim().toLowerCase();
+  register(email: string, password: string): Observable<{ id: number; username: string; email: string }> {
+    const cleanEmail = this.normalizeEmail(email);
 
-    return this.http.post<{ id: number; username: string }>(`${this.base}/v1/auth/register/`, {
-      username: cleanEmail,
-      email: cleanEmail,
-      password,
-    });
+    return this.http.post<{ id: number; username: string; email: string }>(
+      `${this.base}/v1/auth/register/`,
+      {
+        username: cleanEmail,
+        email: cleanEmail,
+        password,
+      }
+    );
   }
 
   registerAndLogin(email: string, password: string): Observable<Tokens> {
-    return this.register(email, password).pipe(
-      switchMap(() => this.login(email, password))
-    );
+    return this.register(email, password).pipe(switchMap(() => this.login(email, password)));
   }
 
   getDisplayName(snapshot?: JwtPayload | null): string {

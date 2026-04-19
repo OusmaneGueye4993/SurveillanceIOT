@@ -1,20 +1,70 @@
 <div class="authPage">
+  <div
+    class="toast"
+    *ngIf="toastVisible"
+    [ngClass]="{
+      'toast-success': toastType === 'success',
+      'toast-error': toastType === 'error',
+      'toast-info': toastType === 'info'
+    }"
+  >
+    <div class="toastAccent"></div>
+
+    <div class="toastLeft">
+      <mat-icon *ngIf="toastType === 'success'">check_circle</mat-icon>
+      <mat-icon *ngIf="toastType === 'error'">error</mat-icon>
+      <mat-icon *ngIf="toastType === 'info'">info</mat-icon>
+    </div>
+
+    <div class="toastContent">
+      <div class="toastTitle">
+        {{
+          toastType === 'success'
+            ? 'Succès'
+            : toastType === 'error'
+            ? 'Erreur'
+            : 'Information'
+        }}
+      </div>
+      <div class="toastMessage">{{ toastMessage }}</div>
+      <div class="toastProgress"></div>
+    </div>
+
+    <button type="button" class="toastClose" (click)="closeToast()">
+      <mat-icon>close</mat-icon>
+    </button>
+  </div>
+
+  <div class="bgOrb orb1"></div>
+  <div class="bgOrb orb2"></div>
+  <div class="bgGrid"></div>
+
   <mat-card class="authCard">
-    <div class="cardGlow"></div>
+    <div class="cardTopGlow"></div>
 
     <div class="brand">
-      <div class="logo">IoT</div>
+      <div class="logoWrap">
+        <div class="logoRing"></div>
+        <div class="logo">IoT</div>
+      </div>
+
       <div class="txt">
+        <div class="eyebrow">Environment Surveillance</div>
         <div class="title">Créer un compte</div>
-        <div class="sub">Active ton espace et ajoute tes appareils</div>
+        <div class="sub">Active ton espace, sécurise ton accès et connecte tes appareils</div>
       </div>
     </div>
 
     <form [formGroup]="form" (ngSubmit)="submit()" class="form">
-      <mat-form-field appearance="outline" class="full">
+      <mat-form-field appearance="outline" class="full glassField">
         <mat-label>Email</mat-label>
         <mat-icon matPrefix>alternate_email</mat-icon>
-        <input matInput formControlName="email" autocomplete="email" placeholder="ex: user@iot.com" />
+        <input
+          matInput
+          formControlName="email"
+          autocomplete="email"
+          placeholder="ex: user@iot.com"
+        />
         <mat-error *ngIf="form.get('email')?.touched && form.get('email')?.hasError('required')">
           Email obligatoire
         </mat-error>
@@ -23,7 +73,7 @@
         </mat-error>
       </mat-form-field>
 
-      <mat-form-field appearance="outline" class="full">
+      <mat-form-field appearance="outline" class="full glassField">
         <mat-label>Mot de passe</mat-label>
         <mat-icon matPrefix>lock</mat-icon>
         <input
@@ -33,23 +83,70 @@
           autocomplete="new-password"
           placeholder="Minimum 8 caractères"
         />
-        <button type="button" mat-icon-button matSuffix (click)="hide = !hide" aria-label="Afficher le mot de passe">
+        <button
+          type="button"
+          mat-icon-button
+          matSuffix
+          (click)="hide = !hide"
+          aria-label="Afficher le mot de passe"
+        >
           <mat-icon>{{ hide ? 'visibility' : 'visibility_off' }}</mat-icon>
         </button>
 
-        <mat-error *ngIf="form.get('password')?.touched && form.get('password')?.invalid">
-          Mot de passe trop faible
+        <mat-error *ngIf="form.get('password')?.touched && form.get('password')?.hasError('required')">
+          Mot de passe obligatoire
+        </mat-error>
+        <mat-error *ngIf="form.get('password')?.touched && form.get('password')?.hasError('minlength')">
+          Minimum 8 caractères
+        </mat-error>
+        <mat-error *ngIf="form.get('password')?.touched && form.get('password')?.hasError('strongPassword')">
+          Le mot de passe doit contenir une minuscule, une majuscule et un chiffre
         </mat-error>
       </mat-form-field>
 
-      <div class="errorBox" *ngIf="error">
-        <mat-icon>error_outline</mat-icon>
-        <div class="errText">{{ error }}</div>
+      <mat-form-field appearance="outline" class="full glassField">
+        <mat-label>Confirmer le mot de passe</mat-label>
+        <mat-icon matPrefix>verified_user</mat-icon>
+        <input
+          matInput
+          [type]="hideConfirm ? 'password' : 'text'"
+          formControlName="confirmPassword"
+          autocomplete="new-password"
+          placeholder="Ressaisis ton mot de passe"
+        />
+        <button
+          type="button"
+          mat-icon-button
+          matSuffix
+          (click)="hideConfirm = !hideConfirm"
+          aria-label="Afficher le mot de passe"
+        >
+          <mat-icon>{{ hideConfirm ? 'visibility' : 'visibility_off' }}</mat-icon>
+        </button>
+
+        <mat-error *ngIf="form.get('confirmPassword')?.touched && form.get('confirmPassword')?.hasError('required')">
+          Confirmation obligatoire
+        </mat-error>
+        <mat-error *ngIf="form.touched && form.hasError('passwordMismatch')">
+          Les mots de passe ne correspondent pas
+        </mat-error>
+      </mat-form-field>
+
+      <div class="infoBox">
+        <div class="infoIcon">
+          <mat-icon>shield</mat-icon>
+        </div>
+        <div class="infoText">
+          Utilise un mot de passe fort avec au moins
+          <strong>8 caractères</strong>, une <strong>majuscule</strong>,
+          une <strong>minuscule</strong> et un <strong>chiffre</strong>.
+        </div>
       </div>
 
       <button mat-raised-button class="primaryBtn" type="submit" [disabled]="loading">
-        <mat-icon>person_add</mat-icon>
-        <span>{{ loading ? 'Création…' : 'Créer mon compte' }}</span>
+        <span class="btnGlow"></span>
+        <mat-icon>{{ loading ? 'hourglass_top' : 'person_add' }}</mat-icon>
+        <span>{{ loading ? 'Création...' : 'Créer mon compte' }}</span>
       </button>
 
       <div class="divider">
@@ -59,14 +156,13 @@
       </div>
 
       <a class="linkBtn" routerLink="/login">
-        Se connecter
+        <span>Se connecter</span>
         <mat-icon>arrow_forward</mat-icon>
       </a>
     </form>
   </mat-card>
 
   <div class="footerNote">
-  
-    <span>©  Environment Surveillance • Secure IoT Console</span>
+    <span>© Environment Surveillance • Secure IoT Console</span>
   </div>
 </div>
