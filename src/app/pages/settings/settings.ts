@@ -1,88 +1,125 @@
-import { Component } from '@angular/core';
-import { AsyncPipe, NgFor, NgIf } from '@angular/common';
-import { FormBuilder, ReactiveFormsModule, FormGroup } from '@angular/forms';
-import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
+import { Component, OnInit } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
 
 import { MatCardModule } from '@angular/material/card';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
-import { MatButtonModule } from '@angular/material/button';
-import { MatSelectModule } from '@angular/material/select';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
+import { MatSelectModule } from '@angular/material/select';
+import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
 
-import { DashboardSettingsService } from '../../core/settings/dashboard-settings.service';
-import { ChartType, DashboardConfig } from '../../core/settings/dashboard-config.model';
-import { Observable } from 'rxjs';
+import { DashboardSettingsService } from './dashboard-settings.service';
+import {
+  DashboardChartType,
+  DashboardConfig,
+} from './dashboard-config.model';
 
 @Component({
   selector: 'app-settings',
   standalone: true,
   imports: [
-    AsyncPipe, NgIf, NgFor,
+    CommonModule,
     ReactiveFormsModule,
-    DragDropModule,
-    MatCardModule, MatSlideToggleModule, MatButtonModule,
-    MatSelectModule, MatFormFieldModule, MatInputModule,
+    MatCardModule,
+    MatSlideToggleModule,
+    MatFormFieldModule,
+    MatInputModule,
+    MatSelectModule,
+    MatButtonModule,
+    MatIconModule,
   ],
   templateUrl: './settings.html',
   styleUrls: ['./settings.scss'],
 })
-export class SettingsComponent {
-  cfg$!: Observable<DashboardConfig>;
+export class SettingsComponent implements OnInit {
   form!: FormGroup;
+  saved = false;
+
+  chartTypes: DashboardChartType[] = ['line', 'bar', 'area'];
 
   constructor(
-    private settings: DashboardSettingsService,
-    private fb: FormBuilder
-  ) {
-    // ✅ strict TS: init after injection
-    this.cfg$ = this.settings.config$;
+    private fb: FormBuilder,
+    private settings: DashboardSettingsService
+  ) {}
 
+  ngOnInit(): void {
     const cfg = this.settings.snapshot;
 
     this.form = this.fb.group({
-      chartType: [cfg.chartType],
-      batteryLow: [cfg.alertThresholds.batteryLow],
-      rssiLow: [cfg.alertThresholds.rssiLow],
-      tempHigh: [cfg.alertThresholds.tempHigh],
-      staleSeconds: [cfg.alertThresholds.staleSeconds],
+      widgets: this.fb.group({
+        temperature: [cfg.widgets.temperature],
+        battery: [cfg.widgets.battery],
+        rssi: [cfg.widgets.rssi],
+        gps: [cfg.widgets.gps],
+        alerts: [cfg.widgets.alerts],
+        history: [cfg.widgets.history],
+        fleet: [cfg.widgets.fleet],
+        miniMap: [cfg.widgets.miniMap],
+      }),
+      behavior: this.fb.group({
+        autoRefresh: [cfg.behavior.autoRefresh],
+        refreshIntervalSec: [cfg.behavior.refreshIntervalSec],
+        compactMode: [cfg.behavior.compactMode],
+        chartType: [cfg.behavior.chartType],
+      }),
+      alertThresholds: this.fb.group({
+        batteryLow: [cfg.alertThresholds.batteryLow],
+        tempHigh: [cfg.alertThresholds.tempHigh],
+        rssiLow: [cfg.alertThresholds.rssiLow],
+        staleSeconds: [cfg.alertThresholds.staleSeconds],
+      }),
+    });
+
+    this.form.valueChanges.subscribe(() => {
+      this.saved = false;
     });
   }
 
-  drop(event: CdkDragDrop<DashboardConfig['widgets']>, cfg: DashboardConfig) {
-    const widgets = [...cfg.widgets];
-    moveItemInArray(widgets, event.previousIndex, event.currentIndex);
-    this.settings.update({ ...cfg, widgets });
-  }
+  save(): void {
+    const raw = this.form.getRawValue();
 
-  toggleWidget(cfg: DashboardConfig, index: number, enabled: boolean) {
-    const widgets = cfg.widgets.map((w, i) => (i === index ? { ...w, enabled } : w));
-    this.settings.update({ ...cfg, widgets });
-  }
-
-  saveForm(cfg: DashboardConfig) {
-    const v: any = this.form.getRawValue();
-    this.settings.update({
-      ...cfg,
-      chartType: (v.chartType ?? cfg.chartType) as ChartType,
-      alertThresholds: {
-        batteryLow: Number(v.batteryLow ?? cfg.alertThresholds.batteryLow),
-        rssiLow: Number(v.rssiLow ?? cfg.alertThresholds.rssiLow),
-        tempHigh: Number(v.tempHigh ?? cfg.alertThresholds.tempHigh),
-        staleSeconds: Number(v.staleSeconds ?? cfg.alertThresholds.staleSeconds),
+    const config: DashboardConfig = {
+      widgets: {
+        temperature: !!raw.widgets.temperature,
+        battery: !!raw.widgets.battery,
+        rssi: !!raw.widgets.rssi,
+        gps: !!raw.widgets.gps,
+        alerts: !!raw.widgets.alerts,
+        history: !!raw.widgets.history,
+        fleet: !!raw.widgets.fleet,
+        miniMap: !!raw.widgets.miniMap,
       },
-    });
+      behavior: {
+        autoRefresh: !!raw.behavior.autoRefresh,
+        refreshIntervalSec: Number(raw.behavior.refreshIntervalSec || 5),
+        compactMode: !!raw.behavior.compactMode,
+        chartType: raw.behavior.chartType as DashboardChartType,
+      },
+      alertThresholds: {
+        batteryLow: Number(raw.alertThresholds.batteryLow || 20),
+        tempHigh: Number(raw.alertThresholds.tempHigh || 40),
+        rssiLow: Number(raw.alertThresholds.rssiLow || -110),
+        staleSeconds: Number(raw.alertThresholds.staleSeconds || 60),
+      },
+    };
+
+    this.settings.update(config);
+    this.saved = true;
+
+    setTimeout(() => {
+      this.saved = false;
+    }, 2500);
   }
 
-  reset() {
+  reset(): void {
     this.settings.reset();
-    const cfg = this.settings.snapshot;
-    this.form.patchValue({
-      chartType: cfg.chartType,
-      batteryLow: cfg.alertThresholds.batteryLow,
-      rssiLow: cfg.alertThresholds.rssiLow,
-      tempHigh: cfg.alertThresholds.tempHigh,
-      staleSeconds: cfg.alertThresholds.staleSeconds,
-    });
+    this.form.reset(this.settings.snapshot);
+    this.saved = true;
+
+    setTimeout(() => {
+      this.saved = false;
+    }, 2500);
   }
 }

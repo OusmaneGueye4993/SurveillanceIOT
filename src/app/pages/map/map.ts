@@ -21,6 +21,7 @@ import { MatListModule } from '@angular/material/list';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
 
 import { FleetMapComponent } from '../../shared/fleet-map/fleet-map';
 import { TelemetryApiService } from '../../core/api/telemetry-api.service';
@@ -44,6 +45,7 @@ type ConnStatus = 'disconnected' | 'connecting' | 'connected';
     MatSlideToggleModule,
     MatButtonToggleModule,
     MatButtonModule,
+    MatIconModule,
     FleetMapComponent,
   ],
   templateUrl: './map.html',
@@ -54,7 +56,11 @@ export class MapComponent implements OnInit, OnDestroy {
   devices$!: Observable<DeviceSummary[]>;
   filtered$!: Observable<DeviceSummary[]>;
   selected$!: Observable<string | null>;
+  selectedDevice$!: Observable<DeviceSummary | null>;
   hasAnyDevice$!: Observable<boolean>;
+
+  onlineCount$!: Observable<number>;
+  offlineCount$!: Observable<number>;
 
   showHistory = true;
   follow = true;
@@ -81,6 +87,21 @@ export class MapComponent implements OnInit, OnDestroy {
     this.selected$ = this.store.selected$;
     this.hasAnyDevice$ = this.deviceStore.devices$.pipe(
       map((list) => (list?.length ?? 0) > 0)
+    );
+
+    this.selectedDevice$ = combineLatest([this.selected$, this.devices$]).pipe(
+      map(([selected, devices]) => {
+        if (!selected) return null;
+        return devices.find((d) => d.device_eui === selected) ?? null;
+      })
+    );
+
+    this.onlineCount$ = this.devices$.pipe(
+      map((list) => (list ?? []).filter((d) => !!d.active).length)
+    );
+
+    this.offlineCount$ = this.devices$.pipe(
+      map((list) => (list ?? []).filter((d) => !d.active).length)
     );
 
     this.deviceStore.refresh();
@@ -137,9 +158,15 @@ export class MapComponent implements OnInit, OnDestroy {
     const s = Math.max(0, Math.round(Date.now() / 1000 - tsSec));
     if (s < 60) return `${s}s`;
     const m = Math.floor(s / 60);
-    if (m < 60) return `${m}m`;
+    if (m < 60) return `${m} min`;
     const h = Math.floor(m / 60);
-    return `${h}h`;
+    return `${h} h`;
+  }
+
+  fmt(v: any, decimals = 0, suffix = ''): string {
+    const n = Number(v);
+    if (!Number.isFinite(n)) return '—';
+    return `${n.toFixed(decimals)}${suffix}`;
   }
 
   private resetHistoryUI(): void {

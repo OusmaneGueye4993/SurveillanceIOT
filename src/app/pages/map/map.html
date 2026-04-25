@@ -1,77 +1,116 @@
 <div class="page">
-  <div class="top">
-    <div class="titleBlock">
-      <h2>Carte GPS</h2>
+  <section class="heroCard">
+    <div class="heroTop">
+      <div class="titleBlock">
+        <div class="eyebrow">Leaflet • GPS • Temps réel</div>
+        <h2>Carte de suivi du drone</h2>
+        <div class="sub">
+          Historique de trajectoire, flotte visible et dernier point GPS.
+          <span class="sep">•</span>
+          API :
+          <b>{{ (status$ | async) ?? '—' }}</b>
+        </div>
+      </div>
 
-      <div class="sub">
-        Historique & flotte
-        <span class="sep">•</span>
-        Statut API:
-        <b>{{ (status$ | async) ?? '—' }}</b>
+      <div class="topActions">
+        <mat-button-toggle-group
+          [value]="(windowKey$ | async) ?? '1h'"
+          (change)="setWindow($event.value)"
+          class="winGroup"
+          aria-label="Fenêtre historique"
+        >
+          <mat-button-toggle value="15m">15 min</mat-button-toggle>
+          <mat-button-toggle value="1h">1 h</mat-button-toggle>
+          <mat-button-toggle value="6h">6 h</mat-button-toggle>
+          <mat-button-toggle value="24h">24 h</mat-button-toggle>
+        </mat-button-toggle-group>
+
+        <button mat-stroked-button class="actionBtn" (click)="refresh()">
+          <mat-icon>refresh</mat-icon>
+          <span>Rafraîchir</span>
+        </button>
+
+        <button
+          mat-stroked-button
+          class="actionBtn"
+          (click)="follow = true; refresh()"
+          [disabled]="!(selected$ | async)"
+        >
+          <mat-icon>my_location</mat-icon>
+          <span>Centrer</span>
+        </button>
+
+        <button
+          mat-stroked-button
+          class="actionBtn"
+          (click)="clearHistory()"
+          [disabled]="history.length === 0">
+          <mat-icon>layers_clear</mat-icon>
+          <span>Effacer trajet</span>
+        </button>
+
+        <mat-slide-toggle
+          [checked]="showHistory"
+          (change)="showHistory = $event.checked"
+        >
+          Trajectoire
+        </mat-slide-toggle>
       </div>
     </div>
 
-    <div class="topActions">
-      <mat-button-toggle-group
-        [value]="(windowKey$ | async) ?? '1h'"
-        (change)="setWindow($event.value)"
-        class="winGroup"
-        aria-label="Fenêtre historique"
-      >
-        <mat-button-toggle value="15m">15 min</mat-button-toggle>
-        <mat-button-toggle value="1h">1 h</mat-button-toggle>
-        <mat-button-toggle value="6h">6 h</mat-button-toggle>
-        <mat-button-toggle value="24h">24 h</mat-button-toggle>
-      </mat-button-toggle-group>
+    <section class="summaryGrid">
+      <mat-card class="summaryCard">
+        <div class="summaryLabel">Device sélectionné</div>
+        <div class="summaryValue mono">
+          {{ (selectedDevice$ | async)?.device_eui || 'Aucun' }}
+        </div>
+      </mat-card>
 
-      <button mat-stroked-button (click)="refresh()">Rafraîchir</button>
+      <mat-card class="summaryCard online">
+        <div class="summaryLabel">En ligne</div>
+        <div class="summaryValue">{{ (onlineCount$ | async) ?? 0 }}</div>
+      </mat-card>
 
-      <button
-        mat-stroked-button
-        (click)="follow = true; refresh()"
-        [disabled]="!(selected$ | async)"
-      >
-        Centrer
-      </button>
+      <mat-card class="summaryCard offline">
+        <div class="summaryLabel">Hors ligne</div>
+        <div class="summaryValue">{{ (offlineCount$ | async) ?? 0 }}</div>
+      </mat-card>
 
-      <button
-        mat-stroked-button
-        (click)="clearHistory()"
-        [disabled]="history.length === 0"
-      >
-        Effacer trajet
-      </button>
+      <mat-card class="summaryCard accent">
+        <div class="summaryLabel">Points historiques</div>
+        <div class="summaryValue">{{ history.length }}</div>
+      </mat-card>
+    </section>
 
-      <mat-slide-toggle
-        [checked]="showHistory"
-        (change)="showHistory = $event.checked"
-      >
-        Trajectoire
-      </mat-slide-toggle>
-    </div>
-  </div>
+    <section class="grid">
+      <mat-card class="mapCard">
+        <div class="panelHead">
+          <div>
+            <div class="panelTitle">Carte principale</div>
+            <div class="panelSub">
+              Visualisation du dernier point et du trajet historique
+            </div>
+          </div>
+        </div>
 
-  <div class="grid">
-    <mat-card class="mapCard">
-      <mat-card-title>Carte</mat-card-title>
-
-      <mat-card-content class="mapWrap">
-        <ng-container *ngIf="(hasAnyDevice$ | async) === true; else noDevices">
-          <ng-container *ngIf="(filtered$ | async) as devices">
-            <ng-container *ngIf="devices.length > 0; else emptyDevices">
-              <app-fleet-map
-                class="map"
-                [devices]="devices"
-                [selected]="(selected$ | async) ?? null"
-                [history]="history"
-                [follow]="follow"
-                [showHistory]="showHistory"
-                (selectDevice)="onSelect($event)"
-              >
-              </app-fleet-map>
+        <div class="mapWrap">
+          <ng-container *ngIf="(hasAnyDevice$ | async) === true; else noDevices">
+            <ng-container *ngIf="(filtered$ | async) as devices">
+              <ng-container *ngIf="devices.length > 0; else emptyDevices">
+                <app-fleet-map
+                  class="map"
+                  [devices]="devices"
+                  [selected]="(selected$ | async) ?? null"
+                  [history]="history"
+                  [follow]="follow"
+                  [showHistory]="showHistory"
+                  (selectDevice)="onSelect($event)"
+                >
+                </app-fleet-map>
+              </ng-container>
             </ng-container>
           </ng-container>
-        </ng-container>
+        </div>
 
         <div class="mapFooter">
           <div class="legend">
@@ -87,13 +126,21 @@
               {{ historyError }}
             </span>
 
-            <span class="pill" *ngIf="!loadingHistory && !historyError && (selected$ | async)">
+            <span
+              class="pill"
+              *ngIf="!loadingHistory && !historyError && (selected$ | async)"
+            >
               Points: <b>{{ history.length }}</b>
             </span>
 
             <span
               class="pill warn"
-              *ngIf="!loadingHistory && !historyError && history.length === 0 && (selected$ | async)"
+              *ngIf="
+                !loadingHistory &&
+                !historyError &&
+                history.length === 0 &&
+                (selected$ | async)
+              "
             >
               Aucun point dans cette fenêtre
             </span>
@@ -102,74 +149,76 @@
 
         <ng-template #noDevices>
           <div class="empty">
-            Aucun appareil enregistré. Ajoute un appareil depuis la page Devices pour utiliser la carte.
+            Aucun appareil enregistré. Ajoute un appareil depuis la page Devices.
           </div>
         </ng-template>
 
         <ng-template #emptyDevices>
           <div class="empty">
-            Tes appareils existent, mais aucune position n’est encore disponible.
+            Tes appareils existent, mais aucune position GPS n’est encore disponible.
           </div>
         </ng-template>
-      </mat-card-content>
-    </mat-card>
+      </mat-card>
 
-    <mat-card class="panel">
-      <mat-card-title>
-        Équipements
-        <span class="count" *ngIf="(filtered$ | async) as d">({{ d.length }})</span>
-      </mat-card-title>
+      <mat-card class="sideCard">
+        <div class="panelHead">
+          <div>
+            <div class="panelTitle">Flotte visible</div>
+            <div class="panelSub">Sélection rapide et état des devices</div>
+          </div>
+        </div>
 
-      <mat-card-content>
-        <ng-container *ngIf="(hasAnyDevice$ | async) === true; else noDeviceList">
-          <ng-container *ngIf="(filtered$ | async) as devices">
-            <mat-nav-list *ngIf="devices.length > 0; else emptyState">
-              <ng-container *ngIf="(selected$ | async) as selected; else noSelection">
-                <a
-                  mat-list-item
-                  class="equip-item"
-                  *ngFor="let d of devices"
-                  (click)="onSelect(d.device_eui)"
-                  [class.selected]="d.device_eui === selected"
-                  role="button"
-                  tabindex="0"
-                >
-                  <span
-                    class="dot"
-                    [class.active]="d.active"
-                    [class.inactive]="!d.active"
-                  ></span>
+        <mat-card-content>
+          <ng-container *ngIf="(hasAnyDevice$ | async) === true; else noDeviceList">
+            <ng-container *ngIf="(filtered$ | async) as devices">
+              <div class="deviceList" *ngIf="devices.length > 0; else emptyState">
+                <ng-container *ngIf="(selected$ | async) as selected; else noSelection">
+                  <button
+                    type="button"
+                    class="equipItem"
+                    *ngFor="let d of devices"
+                    (click)="onSelect(d.device_eui)"
+                    [class.selected]="d.device_eui === selected"
+                  >
+                    <div class="equipLeft">
+                      <span
+                        class="dot"
+                        [class.active]="d.active"
+                        [class.inactive]="!d.active"
+                      ></span>
 
-                  <div class="main">
-                    <div class="eui">{{ d.device_eui }}</div>
-                    <div class="meta">
-                      Bat: <b>{{ d.battery ?? '—' }}</b>% • RSSI:
-                      <b>{{ d.rssi ?? '—' }}</b> • vu il y a
-                      <b>{{ secondsAgoTs(d.lastTs) }}</b>
+                      <div class="equipMain">
+                        <div class="eui">{{ d.device_eui }}</div>
+                        <div class="meta">
+                          Bat: <b>{{ d.battery ?? '—' }}</b>% • RSSI:
+                          <b>{{ d.rssi ?? '—' }}</b> • vu il y a
+                          <b>{{ secondsAgoTs(d.lastTs) }}</b>
+                        </div>
+                      </div>
                     </div>
-                  </div>
 
-                  <span class="badge" [class.ok]="d.active" [class.off]="!d.active">
-                    {{ d.active ? 'ACTIF' : 'INACTIF' }}
-                  </span>
-                </a>
-              </ng-container>
-            </mat-nav-list>
+                    <span class="badge" [class.ok]="d.active" [class.off]="!d.active">
+                      {{ d.active ? 'ACTIF' : 'INACTIF' }}
+                    </span>
+                  </button>
+                </ng-container>
+              </div>
+            </ng-container>
           </ng-container>
-        </ng-container>
 
-        <ng-template #noDeviceList>
-          <div class="empty">Aucun appareil enregistré.</div>
-        </ng-template>
+          <ng-template #noDeviceList>
+            <div class="empty">Aucun appareil enregistré.</div>
+          </ng-template>
 
-        <ng-template #emptyState>
-          <div class="empty">Aucune télémétrie disponible pour afficher la flotte.</div>
-        </ng-template>
+          <ng-template #emptyState>
+            <div class="empty">Aucune télémétrie disponible pour afficher la flotte.</div>
+          </ng-template>
 
-        <ng-template #noSelection>
-          <div class="empty">Aucun appareil sélectionné.</div>
-        </ng-template>
-      </mat-card-content>
-    </mat-card>
-  </div>
+          <ng-template #noSelection>
+            <div class="empty">Aucun appareil sélectionné.</div>
+          </ng-template>
+        </mat-card-content>
+      </mat-card>
+    </section>
+  </section>
 </div>

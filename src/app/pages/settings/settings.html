@@ -1,115 +1,220 @@
-<div class="page">
-  <div class="head">
-    <div>
-      <h2>Paramètres</h2>
-      <p>Personnalise ton dashboard : widgets, ordre, seuils d’alerte.</p>
+<div class="settingsPage">
+  <section class="settingsHero">
+    <div class="heroGlow heroGlowOne"></div>
+    <div class="heroGlow heroGlowTwo"></div>
+
+    <div class="heroTop">
+      <div class="heroText">
+        <div class="eyebrow">PERSONNALISATION • DASHBOARD • WIDGETS</div>
+        <h1>Paramètres du dashboard</h1>
+        <p>
+          Contrôle l’affichage des widgets, le comportement du dashboard,
+          le type de graphique et les seuils d’alerte.
+        </p>
+      </div>
+
+      <div class="heroActions">
+        <button mat-stroked-button class="ghostBtn" type="button" (click)="reset()">
+          <mat-icon>restart_alt</mat-icon>
+          <span>Réinitialiser</span>
+        </button>
+
+        <button mat-raised-button class="saveBtn" type="button" (click)="save()">
+          <mat-icon>save</mat-icon>
+          <span>Enregistrer</span>
+        </button>
+      </div>
     </div>
-  </div>
 
-  <ng-container *ngIf="cfg$ | async as cfg">
-    <div class="grid">
-
-      <!-- =========================
-           1) Widgets : ordre + on/off
-           ========================= -->
-      <mat-card class="card">
-        <mat-card-title>Widgets</mat-card-title>
-        <mat-card-content>
-          <div class="hint">
-            Glisse-dépose pour changer l’ordre. Active/désactive pour afficher sur le dashboard.
-          </div>
-
-          <div
-            cdkDropList
-            class="list"
-            (cdkDropListDropped)="drop($event, cfg)"
-          >
-            <div class="row" *ngFor="let w of cfg.widgets; let i = index" cdkDrag>
-              <div class="left">
-                <span class="drag">☰</span>
-                <div class="meta">
-                  <div class="title">{{ w.title }}</div>
-                  <div class="sub">{{ w.type }}</div>
-                </div>
-              </div>
-
-              <mat-slide-toggle
-                [checked]="w.enabled"
-                (change)="toggleWidget(cfg, i, $event.checked)"
-              ></mat-slide-toggle>
-            </div>
-          </div>
-        </mat-card-content>
-
-        <mat-card-actions align="end">
-          <button mat-stroked-button type="button" (click)="reset()">Réinitialiser</button>
-        </mat-card-actions>
-      </mat-card>
-
-      <!-- =========================
-           2) Configuration (1 seule carte)
-           ========================= -->
-      <mat-card class="card">
-        <mat-card-title>Configuration</mat-card-title>
-        <mat-card-content>
-
-          <!-- ✅ Important : un seul formGroup + formControlName -->
-          <form class="form" [formGroup]="form">
-
-            <div class="section">
-              <div class="sectionTitle">Graphe</div>
-
-              <mat-form-field appearance="outline" class="full">
-                <mat-label>Type de graphe</mat-label>
-                <mat-select formControlName="chartType">
-                  <mat-option value="line">Ligne</mat-option>
-                  <mat-option value="bar">Barres</mat-option>
-                  <mat-option value="area">Aire</mat-option>
-                </mat-select>
-              </mat-form-field>
-            </div>
-
-            <div class="divider"></div>
-
-            <div class="section">
-              <div class="sectionTitle">Seuils d’alerte</div>
-
-              <div class="fields">
-                <mat-form-field appearance="outline">
-                  <mat-label>Batterie faible (%)</mat-label>
-                  <input matInput type="number" formControlName="batteryLow" />
-                </mat-form-field>
-
-                <mat-form-field appearance="outline">
-                  <mat-label>Signal faible RSSI (dBm)</mat-label>
-                  <input matInput type="number" formControlName="rssiLow" />
-                </mat-form-field>
-
-                <mat-form-field appearance="outline">
-                  <mat-label>Température max (°C)</mat-label>
-                  <input matInput type="number" formControlName="tempHigh" />
-                </mat-form-field>
-
-                <mat-form-field appearance="outline">
-                  <mat-label>Données absentes (sec)</mat-label>
-                  <input matInput type="number" formControlName="staleSeconds" />
-                </mat-form-field>
-              </div>
-            </div>
-
-            <div class="actions">
-              <button mat-raised-button color="primary" type="button" (click)="saveForm(cfg)">
-                Enregistrer
-              </button>
-              <button mat-stroked-button type="button" (click)="reset()">
-                Reset
-              </button>
-            </div>
-
-          </form>
-        </mat-card-content>
-      </mat-card>
-
+    <div class="saveBanner" *ngIf="saved">
+      <mat-icon>check_circle</mat-icon>
+      <span>Paramètres enregistrés avec succès.</span>
     </div>
-  </ng-container>
+  </section>
+
+  <form [formGroup]="form" class="settingsGrid">
+    <mat-card class="settingsCard sectionCard" formGroupName="widgets">
+      <div class="cardHeader">
+        <div class="cardHeaderText">
+          <div class="cardEyebrow">Affichage</div>
+          <div class="cardTitle">Widgets visibles</div>
+          <div class="cardSub">
+            Active ou masque les éléments du dashboard selon ton besoin.
+          </div>
+        </div>
+
+        <div class="cardIcon softGreen">
+          <mat-icon>dashboard_customize</mat-icon>
+        </div>
+      </div>
+
+      <div class="toggleGrid">
+        <div class="toggleCard">
+          <div class="toggleInfo">
+            <div class="toggleTitle">Température</div>
+            <div class="toggleText">Afficher la carte KPI température</div>
+          </div>
+          <mat-slide-toggle formControlName="temperature"></mat-slide-toggle>
+        </div>
+
+        <div class="toggleCard">
+          <div class="toggleInfo">
+            <div class="toggleTitle">Batterie</div>
+            <div class="toggleText">Afficher la carte KPI batterie</div>
+          </div>
+          <mat-slide-toggle formControlName="battery"></mat-slide-toggle>
+        </div>
+
+        <div class="toggleCard">
+          <div class="toggleInfo">
+            <div class="toggleTitle">RSSI</div>
+            <div class="toggleText">Afficher la qualité du signal radio</div>
+          </div>
+          <mat-slide-toggle formControlName="rssi"></mat-slide-toggle>
+        </div>
+
+        <div class="toggleCard">
+          <div class="toggleInfo">
+            <div class="toggleTitle">GPS</div>
+            <div class="toggleText">Afficher les coordonnées GPS</div>
+          </div>
+          <mat-slide-toggle formControlName="gps"></mat-slide-toggle>
+        </div>
+
+        <div class="toggleCard">
+          <div class="toggleInfo">
+            <div class="toggleTitle">Mini-carte</div>
+            <div class="toggleText">Afficher la position actuelle</div>
+          </div>
+          <mat-slide-toggle formControlName="miniMap"></mat-slide-toggle>
+        </div>
+
+        <div class="toggleCard">
+          <div class="toggleInfo">
+            <div class="toggleTitle">Alertes</div>
+            <div class="toggleText">Afficher les alertes intelligentes</div>
+          </div>
+          <mat-slide-toggle formControlName="alerts"></mat-slide-toggle>
+        </div>
+
+        <div class="toggleCard">
+          <div class="toggleInfo">
+            <div class="toggleTitle">Historique</div>
+            <div class="toggleText">Afficher le graphique d’historique</div>
+          </div>
+          <mat-slide-toggle formControlName="history"></mat-slide-toggle>
+        </div>
+
+        <div class="toggleCard">
+          <div class="toggleInfo">
+            <div class="toggleTitle">Liste flotte</div>
+            <div class="toggleText">Afficher la liste des appareils visibles</div>
+          </div>
+          <mat-slide-toggle formControlName="fleet"></mat-slide-toggle>
+        </div>
+      </div>
+    </mat-card>
+
+    <mat-card class="settingsCard sectionCard" formGroupName="behavior">
+      <div class="cardHeader">
+        <div class="cardHeaderText">
+          <div class="cardEyebrow">Comportement</div>
+          <div class="cardTitle">Expérience du dashboard</div>
+          <div class="cardSub">
+            Ajuste le rafraîchissement, le type de graphique et la densité visuelle.
+          </div>
+        </div>
+
+        <div class="cardIcon softGold">
+          <mat-icon>tune</mat-icon>
+        </div>
+      </div>
+
+      <div class="behaviorGrid">
+        <div class="featureCard">
+          <div class="featureText">
+            <div class="toggleTitle">Auto-refresh</div>
+            <div class="toggleText">
+              Actualiser automatiquement les données du dashboard.
+            </div>
+          </div>
+          <mat-slide-toggle formControlName="autoRefresh"></mat-slide-toggle>
+        </div>
+
+        <div class="featureCard">
+          <div class="featureText">
+            <div class="toggleTitle">Mode compact</div>
+            <div class="toggleText">
+              Réduire la densité visuelle pour afficher plus d’informations.
+            </div>
+          </div>
+          <mat-slide-toggle formControlName="compactMode"></mat-slide-toggle>
+        </div>
+
+        <mat-form-field appearance="outline" class="fullField">
+          <mat-label>Intervalle de refresh (sec)</mat-label>
+          <input
+            matInput
+            type="number"
+            min="3"
+            max="300"
+            formControlName="refreshIntervalSec"
+          />
+          <mat-icon matSuffix>timer</mat-icon>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="fullField">
+          <mat-label>Type de graphique</mat-label>
+          <mat-select formControlName="chartType">
+            <mat-option *ngFor="let type of chartTypes" [value]="type">
+              {{ type }}
+            </mat-option>
+          </mat-select>
+          <mat-icon matSuffix>insights</mat-icon>
+        </mat-form-field>
+      </div>
+    </mat-card>
+
+    <mat-card class="settingsCard sectionCard" formGroupName="alertThresholds">
+      <div class="cardHeader">
+        <div class="cardHeaderText">
+          <div class="cardEyebrow">Alertes</div>
+          <div class="cardTitle">Seuils intelligents</div>
+          <div class="cardSub">
+            Définit les valeurs qui déclenchent les alertes automatiques.
+          </div>
+        </div>
+
+        <div class="cardIcon softRed">
+          <mat-icon>warning</mat-icon>
+        </div>
+      </div>
+
+      <div class="thresholdGrid">
+        <mat-form-field appearance="outline" class="fullField">
+          <mat-label>Batterie faible (%)</mat-label>
+          <input matInput type="number" formControlName="batteryLow" />
+          <mat-icon matSuffix>battery_alert</mat-icon>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="fullField">
+          <mat-label>Température élevée (°C)</mat-label>
+          <input matInput type="number" formControlName="tempHigh" />
+          <mat-icon matSuffix>device_thermostat</mat-icon>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="fullField">
+          <mat-label>RSSI faible (dBm)</mat-label>
+          <input matInput type="number" formControlName="rssiLow" />
+          <mat-icon matSuffix>network_cell</mat-icon>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="fullField">
+          <mat-label>Silence device (sec)</mat-label>
+          <input matInput type="number" formControlName="staleSeconds" />
+          <mat-icon matSuffix>portable_wifi_off</mat-icon>
+        </mat-form-field>
+      </div>
+    </mat-card>
+  </form>
 </div>

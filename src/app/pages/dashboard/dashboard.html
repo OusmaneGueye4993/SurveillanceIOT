@@ -1,315 +1,340 @@
 <ng-container *ngIf="(hasAnyDevice$ | async) === true; else noDevices">
+  <ng-container *ngIf="vm$ | async as vm">
+    <div class="page" [class.compact-mode]="vm.cfg.behavior.compactMode">
+      <section class="heroCard">
+        <div class="heroGlow heroGlowOne"></div>
+        <div class="heroGlow heroGlowTwo"></div>
 
-  <div class="dashHead">
-    <div class="left">
-      <h2>Dashboard</h2>
-      <div class="sub">
-        <span>Flotte (REST)</span>
-        <span class="sep">•</span>
-        <span>Statut API: <b class="ok">{{ (status$ | async) ?? '—' }}</b></span>
-      </div>
-    </div>
+        <div class="heroTop">
+          <div class="heroTitleBlock">
+            <div class="eyebrow">Système de surveillance environnementale</div>
+            <h1>Dashboard temps réel</h1>
+    
+          </div>
 
-    <div class="right">
-      <button mat-stroked-button type="button" (click)="refresh()">
-        Rafraîchir
-      </button>
+          <div class="heroActions">
+            <button mat-raised-button class="refreshBtn" type="button" (click)="refresh()">
+              <mat-icon>refresh</mat-icon>
+              <span>Rafraîchir</span>
+            </button>
 
-      <mat-form-field appearance="outline" class="ctrl deviceCtrl">
-        <mat-label>Appareil</mat-label>
-        <mat-select
-          [value]="(selected$ | async) ?? null"
-          (selectionChange)="onSelect($event.value)"
-        >
-          <mat-option
-            *ngFor="let d of (filtered$ | async) ?? []; trackBy: trackByEui"
-            [value]="d.device_eui"
-          >
-            {{ d.device_eui }} — {{ d.active ? 'actif' : 'inactif' }}
-          </mat-option>
-        </mat-select>
-      </mat-form-field>
+            <mat-form-field appearance="outline" class="ctrl deviceCtrl">
+              <mat-label>Appareil</mat-label>
+              <mat-select
+                [value]="(selected$ | async) || null"
+                (selectionChange)="onSelect($event.value)"
+              >
+                <mat-option
+                  *ngFor="let d of (filtered$ | async) || []; trackBy: trackByEui"
+                  [value]="d.device_eui"
+                >
+                  {{ d.name || d.device_eui }} — {{ d.active ? 'hors ligne' : 'en ligne' }}
+                </mat-option>
+              </mat-select>
+            </mat-form-field>
 
-      <mat-form-field appearance="outline" class="ctrl searchCtrl">
-        <mat-label>Rechercher</mat-label>
-        <input matInput [formControl]="searchCtrl" placeholder="DRONE_A, 70B3..." />
-        <mat-icon matSuffix>search</mat-icon>
-      </mat-form-field>
-    </div>
-  </div>
+            <mat-form-field appearance="outline" class="ctrl searchCtrl">
+              <mat-label>Recherche</mat-label>
+              <input matInput [formControl]="searchCtrl" placeholder="Device EUI ou nom" />
+              <mat-icon matSuffix>search</mat-icon>
+            </mat-form-field>
+          </div>
+        </div>
 
-  <mat-card class="cardTable" *ngIf="(filtered$ | async) as devices">
-    <div class="cardHeader">
-      <div>
-        <div class="title">Appareils détectés</div>
-        <div class="muted">{{ devices.length }} équipement(s)</div>
-      </div>
-
-      <div class="tableActions">
-        <a class="link" routerLink="/devices">Gérer les appareils →</a>
-      </div>
-    </div>
-
-    <mat-card-content>
-      <div class="tableWrap" *ngIf="devices.length > 0; else emptyState">
-        <table mat-table [dataSource]="devices" class="mat-elevation-z0 proTable">
-
-          <ng-container matColumnDef="status">
-            <th mat-header-cell *matHeaderCellDef>Statut</th>
-            <td mat-cell *matCellDef="let d">
-              <span class="chip" [class.on]="d.active" [class.off]="!d.active">
-                <span class="dot" [class.on]="d.active" [class.off]="!d.active"></span>
-                {{ d.active ? 'Actif' : 'Inactif' }}
+        <div class="heroMeta">
+          <div class="metaChip">
+            <div class="metaLabel">API</div>
+            <div class="metaValue">
+              <span class="statusBadge" [class.ok]="vm.apiStatus === 'connected'" [class.off]="vm.apiStatus !== 'connected'">
+                <span class="statusDot"></span>
+                {{ vm.apiStatus }}
               </span>
-            </td>
-          </ng-container>
+            </div>
+          </div>
 
-          <ng-container matColumnDef="device">
-            <th mat-header-cell *matHeaderCellDef>Device</th>
-            <td mat-cell *matCellDef="let d" class="deviceCell">
-              <span class="devName">{{ d.device_eui }}</span>
-              <span class="devSub" *ngIf="d.name">{{ d.name }}</span>
-            </td>
-          </ng-container>
+          <div class="metaChip">
+            <div class="metaLabel">Device actif</div>
+            <div class="metaValue strong">{{ vm.device?.device_eui || 'Aucun' }}</div>
+          </div>
 
-          <ng-container matColumnDef="last">
-            <th mat-header-cell *matHeaderCellDef>Dernier msg</th>
-            <td mat-cell *matCellDef="let d">
-              <span class="muted">il y a</span>
-              <b>{{ secondsAgo(d.lastSeenMs) }}</b>
-            </td>
-          </ng-container>
+          <div class="metaChip">
+            <div class="metaLabel">Flotte visible</div>
+            <div class="metaValue strong">{{ vm.totalVisibleDevices }}</div>
+          </div>
 
-          <ng-container matColumnDef="battery">
-            <th mat-header-cell *matHeaderCellDef>Batterie</th>
-            <td mat-cell *matCellDef="let d">
-              <div class="batWrap">
-                <span class="num">{{ fmt(d.battery ?? d.last?.battery, 0) }}%</span>
-                <span class="batBar" [style.--p.%]="fmt(d.battery ?? d.last?.battery, 0)"></span>
+          <div class="metaChip">
+            <div class="metaLabel">Dernière sync</div>
+            <div class="metaValue strong">{{ freshnessLabel(vm.freshnessSec) }}</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="kpiGrid">
+        <mat-card class="kpiCard kpiPrimary">
+          <div class="kpiIcon">
+            <mat-icon>memory</mat-icon>
+          </div>
+          <div class="kpiContent">
+            <div class="kpiLabel">Statut device</div>
+            <div class="kpiValue">{{ vm.isOnline ? 'En ligne' : 'Hors ligne' }}</div>
+            <div class="kpiHint">
+              {{ vm.device?.name || vm.device?.device_eui || 'Aucun appareil sélectionné' }}
+            </div>
+          </div>
+        </mat-card>
+
+        <mat-card class="kpiCard" *ngIf="vm.cfg.widgets.temperature">
+          <div class="kpiIcon temp">
+            <mat-icon>device_thermostat</mat-icon>
+          </div>
+          <div class="kpiContent">
+            <div class="kpiLabel">Température</div>
+            <div class="kpiValue">{{ fmt(vm.telemetry?.temp, 1, '°C') }}</div>
+            <div class="kpiHint">Dernier point reçu</div>
+          </div>
+        </mat-card>
+
+        <mat-card class="kpiCard" *ngIf="vm.cfg.widgets.battery">
+          <div class="kpiIcon battery">
+            <mat-icon>battery_full</mat-icon>
+          </div>
+          <div class="kpiContent">
+            <div class="kpiLabel">Batterie</div>
+            <div class="kpiValue">{{ fmt(vm.telemetry?.battery, 0, '%') }}</div>
+            <div class="kpiHint">Autonomie actuelle</div>
+          </div>
+        </mat-card>
+
+        <mat-card class="kpiCard" *ngIf="vm.cfg.widgets.rssi">
+          <div class="kpiIcon signal">
+            <mat-icon>network_cell</mat-icon>
+          </div>
+          <div class="kpiContent">
+            <div class="kpiLabel">Signal RSSI</div>
+            <div class="kpiValue">{{ fmt(vm.telemetry?.rssi, 0, ' dBm') }}</div>
+            <div class="kpiHint">Qualité radio LoRa</div>
+          </div>
+        </mat-card>
+
+        <mat-card class="kpiCard" *ngIf="vm.cfg.widgets.gps">
+          <div class="kpiIcon gps">
+            <mat-icon>my_location</mat-icon>
+          </div>
+          <div class="kpiContent">
+            <div class="kpiLabel">Position GPS</div>
+            <div class="kpiValue small">
+              {{ fmt(vm.telemetry?.lat, 4) }},
+              {{ fmt(vm.telemetry?.lng, 4) }}
+            </div>
+            <div class="kpiHint">
+              {{ vm.hasGps ? 'Coordonnées valides' : 'Position indisponible' }}
+            </div>
+          </div>
+        </mat-card>
+
+        <mat-card class="kpiCard" *ngIf="vm.cfg.widgets.alerts">
+          <div class="kpiIcon alert">
+            <mat-icon>notifications_active</mat-icon>
+          </div>
+          <div class="kpiContent">
+            <div class="kpiLabel">Alertes actives</div>
+            <div class="kpiValue">{{ vm.alertCount }}</div>
+            <div class="kpiHint">Résumé automatique</div>
+          </div>
+        </mat-card>
+      </section>
+
+      <section class="contentGrid">
+        <mat-card class="panelCard mapCard" *ngIf="vm.cfg.widgets.miniMap">
+          <div class="panelHead">
+            <div>
+              <div class="panelTitle">Position actuelle</div>
+              <div class="panelSub">Dernière position connue du device sélectionné</div>
+            </div>
+            <a class="softLink" routerLink="/map">Carte complète →</a>
+          </div>
+
+          <div class="mapWrap" *ngIf="vm.telemetry?.lat != null && vm.telemetry?.lng != null; else noMap">
+            <app-mini-map
+              [lat]="vm.telemetry?.lat || null"
+              [lng]="vm.telemetry?.lng || null"
+            ></app-mini-map>
+          </div>
+
+          <ng-template #noMap>
+            <div class="emptyState compact">
+              <mat-icon>location_off</mat-icon>
+              <div>
+                <div class="emptyTitle">Aucune position GPS disponible</div>
+                <div class="emptyText">
+                  Le système n’a pas encore reçu de coordonnées exploitables.
+                </div>
               </div>
-            </td>
-          </ng-container>
+            </div>
+          </ng-template>
+        </mat-card>
 
-          <ng-container matColumnDef="rssi">
-            <th mat-header-cell *matHeaderCellDef>RSSI</th>
-            <td mat-cell *matCellDef="let d">
-              <span class="num">{{ fmt(d.rssi ?? d.last?.rssi, 0) }} dBm</span>
-            </td>
-          </ng-container>
+        <mat-card class="panelCard">
+          <div class="panelHead">
+            <div>
+              <div class="panelTitle">État du device</div>
+              <div class="panelSub">Synthèse opérationnelle du dernier point</div>
+            </div>
+          </div>
 
-          <ng-container matColumnDef="action">
-            <th mat-header-cell *matHeaderCellDef></th>
-            <td mat-cell *matCellDef="let d" class="actionCell">
-              <button
-                mat-stroked-button
-                class="btnView"
-                (click)="onSelect(d.device_eui); $event.stopPropagation()"
-              >
-                Visualiser
-              </button>
-            </td>
-          </ng-container>
+          <div class="stateGrid">
+            <div class="stateRow">
+              <span class="stateLabel">Device EUI</span>
+              <span class="stateValue mono">{{ vm.device?.device_eui || '—' }}</span>
+            </div>
 
-          <tr mat-header-row *matHeaderRowDef="['status','device','last','battery','rssi','action']"></tr>
+            <div class="stateRow">
+              <span class="stateLabel">Nom</span>
+              <span class="stateValue">{{ vm.device?.name || '—' }}</span>
+            </div>
 
-          <ng-container *ngIf="(selected$ | async) as selected">
-            <tr
-              mat-row
-              *matRowDef="let row; columns: ['status','device','last','battery','rssi','action'];"
-              (click)="onSelect(row.device_eui)"
-              [class.selected]="row.device_eui === selected"
-            ></tr>
-          </ng-container>
-        </table>
-      </div>
+            <div class="stateRow">
+              <span class="stateLabel">Dernier message</span>
+              <span class="stateValue">{{ secondsAgoFromEpoch(vm.telemetry?.ts) }}</span>
+            </div>
 
-      <ng-template #emptyState>
-        <div class="empty">
-          Aucun appareil visible dans la flotte. Vérifie la liste de tes appareils et la télémétrie disponible.
-        </div>
-      </ng-template>
-    </mat-card-content>
-  </mat-card>
+            <div class="stateRow">
+              <span class="stateLabel">SNR</span>
+              <span class="stateValue">{{ fmt(vm.telemetry?.snr, 1) }}</span>
+            </div>
 
-  <ng-container *ngIf="(selected$ | async) as selected; else noSelected">
-    <ng-container *ngIf="(telemetry$ | async) as t; else noTelemetry">
-      <ng-container *ngIf="cfg$ | async as cfg">
+            <div class="stateRow">
+              <span class="stateLabel">Statut</span>
+              <span class="stateValue">
+                <span class="inlineBadge" [class.ok]="vm.isOnline" [class.off]="!vm.isOnline">
+                  {{ vm.isOnline ? 'En ligne' : 'Hors ligne' }}
+                </span>
+              </span>
+            </div>
 
-        <div class="grid">
-          <ng-container *ngFor="let w of cfg.widgets">
-            <ng-container *ngIf="w.enabled">
+            <div class="stateRow">
+              <span class="stateLabel">GPS</span>
+              <span class="stateValue">
+                <span class="inlineBadge" [class.ok]="vm.hasGps" [class.off]="!vm.hasGps">
+                  {{ vm.hasGps ? 'Disponible' : 'Indisponible' }}
+                </span>
+              </span>
+            </div>
+          </div>
+        </mat-card>
 
-              <mat-card
-                *ngIf="w.type === 'kpi-battery'"
-                class="kpi"
-                [class.kpi-battery]="(t?.battery ?? 0) >= cfg.alertThresholds.batteryLow"
-                [class.kpi-battery-low]="(t?.battery ?? 0) < cfg.alertThresholds.batteryLow"
-              >
-                <mat-card-content class="kpi-content">
-                  <div class="kpi-left">
-                    <div class="kpi-icon"><mat-icon>battery_full</mat-icon></div>
-                    <div>
-                      <div class="kpi-title">{{ w.title }}</div>
-                      <div class="kpi-sub">Niveau actuel</div>
-                    </div>
-                  </div>
-                  <div class="kpi-right">
-                    <div class="kpi-value">{{ fmt(t?.battery, 0) }}%</div>
-                  </div>
-                </mat-card-content>
-              </mat-card>
+        <mat-card class="panelCard chartCard" *ngIf="vm.cfg.widgets.history">
+          <div class="panelHead">
+            <div>
+              <div class="panelTitle">Historique récent</div>
+              <div class="panelSub">
+                Température, batterie et qualité radio sur la dernière heure
+              </div>
+            </div>
+            <span class="hintPill" *ngIf="historyLoading">Chargement…</span>
+          </div>
 
-              <mat-card *ngIf="w.type === 'kpi-temp'" class="kpi kpi-temp">
-                <mat-card-content class="kpi-content">
-                  <div class="kpi-left">
-                    <div class="kpi-icon"><mat-icon>device_thermostat</mat-icon></div>
-                    <div>
-                      <div class="kpi-title">{{ w.title }}</div>
-                      <div class="kpi-sub">Capteur interne</div>
-                    </div>
-                  </div>
-                  <div class="kpi-right">
-                    <div class="kpi-value">{{ fmt(t?.temp, 1) }}°C</div>
-                  </div>
-                </mat-card-content>
-              </mat-card>
+          <div class="historyError" *ngIf="historyError">{{ historyError }}</div>
 
-              <mat-card *ngIf="w.type === 'kpi-rssi'" class="kpi kpi-rssi">
-                <mat-card-content class="kpi-content">
-                  <div class="kpi-left">
-                    <div class="kpi-icon"><mat-icon>network_cell</mat-icon></div>
-                    <div>
-                      <div class="kpi-title">{{ w.title }}</div>
-                      <div class="kpi-sub">Qualité du lien</div>
-                    </div>
-                  </div>
-                  <div class="kpi-right">
-                    <div class="kpi-value">{{ fmt(t?.rssi, 0) }} dBm</div>
-                  </div>
-                </mat-card-content>
-              </mat-card>
+          <div class="chartWrap" *ngIf="!historyError">
+            <app-telemetry-chart
+              [chartType]="vm.cfg.behavior.chartType"
+              [history]="history"
+              [point]="vm.telemetry"
+            ></app-telemetry-chart>
+          </div>
+        </mat-card>
 
-              <mat-card *ngIf="w.type === 'kpi-gps'" class="kpi kpi-gps">
-                <mat-card-content class="kpi-content">
-                  <div class="kpi-left">
-                    <div class="kpi-icon"><mat-icon>my_location</mat-icon></div>
-                    <div>
-                      <div class="kpi-title">{{ w.title }}</div>
-                      <div class="kpi-sub">Position</div>
-                    </div>
-                  </div>
-                  <div class="kpi-right">
-                    <div class="kpi-value small">
-                      {{ fmt(t?.lat, 4) }}, {{ fmt(t?.lng, 4) }}
-                    </div>
-                  </div>
-                </mat-card-content>
-              </mat-card>
+        <mat-card class="panelCard alertsCard" *ngIf="vm.cfg.widgets.alerts">
+          <div class="panelHead">
+            <div>
+              <div class="panelTitle">Alertes intelligentes</div>
+              <div class="panelSub">Détection automatique basée sur les seuils du dashboard</div>
+            </div>
+            <a class="softLink" routerLink="/alerts">Voir tout →</a>
+          </div>
 
-              <mat-card *ngIf="w.type === 'mini-map'" class="wide miniMapCard">
-                <div class="miniMapHead">
-                  <div class="miniMapTitle">{{ w.title }}</div>
-                  <div class="miniMapHint">
-                    <a routerLink="/map">Ouvrir la carte complète →</a>
+          <div class="alertList" *ngIf="alerts$ | async as alerts">
+            <div
+              class="alertItem"
+              *ngFor="let alert of alerts"
+              [class.critical]="alert.level === 'critical'"
+              [class.warn]="alert.level === 'warn'"
+              [class.info]="alert.level === 'info'"
+            >
+              <div class="alertIcon">
+                <mat-icon>{{ levelIcon(alert.level) }}</mat-icon>
+              </div>
+
+              <div class="alertBody">
+                <div class="alertTop">
+                  <div class="alertTitle">{{ alert.title }}</div>
+                  <div class="alertBadge">{{ levelLabel(alert.level) }}</div>
+                </div>
+                <div class="alertText">{{ alert.message }}</div>
+              </div>
+            </div>
+          </div>
+        </mat-card>
+
+        <mat-card class="panelCard fleetCard" *ngIf="vm.cfg.widgets.fleet">
+          <div class="panelHead">
+            <div>
+              <div class="panelTitle">Devices visibles</div>
+              <div class="panelSub">Sélection rapide et état de la flotte</div>
+            </div>
+            <a class="softLink" routerLink="/devices">Gérer →</a>
+          </div>
+
+          <div class="fleetList" *ngIf="filtered$ | async as devices">
+            <button
+              type="button"
+              class="fleetItem"
+              *ngFor="let d of devices; trackBy: trackByEui"
+              [class.selected]="d.device_eui === vm.device?.device_eui"
+              (click)="onSelect(d.device_eui)"
+            >
+              <div class="fleetLeft">
+                <span class="fleetDot" [class.ok]="d.active" [class.off]="!d.active"></span>
+                <div class="fleetText">
+                  <div class="fleetEui">{{ d.device_eui }}</div>
+                  <div class="fleetMeta">
+                    {{ d.name || 'Sans nom' }} • vu il y a {{ secondsAgoFromEpoch(d.lastTs) }}
                   </div>
                 </div>
+              </div>
 
-                <div class="miniMapBody">
-                  <app-mini-map [lat]="t?.lat" [lng]="t?.lng"></app-mini-map>
-                </div>
-              </mat-card>
+              <div class="fleetRight">
+                <span class="fleetBadge" [class.ok]="d.active" [class.off]="!d.active">
+                  {{ d.active ? 'ONLINE' : 'OFFLINE' }}
+                </span>
+              </div>
+            </button>
 
-              <mat-card *ngIf="w.type === 'alerts'" class="wide">
-                <div class="wideHead">
-                  <div class="wideTitle">{{ w.title }}</div>
-                  <a class="link" routerLink="/alerts">Voir tout →</a>
-                </div>
-
-                <mat-card-content>
-                  <div *ngIf="alerts$ | async as a">
-                    <p *ngIf="a.length === 0" class="hint">Aucune alerte.</p>
-
-                    <div
-                      *ngFor="let item of (a | slice:0:3)"
-                      class="alert"
-                      [class.critical]="item.level === 'critical'"
-                      [class.warn]="item.level === 'warn'"
-                    >
-                      <b>{{ item.level }}</b> — {{ item.message }}
-                    </div>
-
-                    <div *ngIf="a.length > 3" class="moreHint">
-                      +{{ a.length - 3 }} autre(s) alerte(s)
-                    </div>
-                  </div>
-                </mat-card-content>
-              </mat-card>
-
-              <mat-card *ngIf="w.type === 'chart-telemetry'" class="wide">
-                <div class="wideHead">
-                  <div class="wideTitle">{{ w.title }}</div>
-                  <div class="miniMapHint">
-                    <span *ngIf="historyLoading">Chargement de l’historique…</span>
-                    <span *ngIf="!historyLoading && historyError">{{ historyError }}</span>
-                    <span *ngIf="!historyLoading && !historyError">Fenêtre: 1 h</span>
-                  </div>
-                </div>
-
-                <mat-card-content>
-                  <app-telemetry-chart
-                    [chartType]="cfg.chartType"
-                    [history]="history"
-                    [point]="t"
-                  ></app-telemetry-chart>
-                </mat-card-content>
-              </mat-card>
-
-            </ng-container>
-          </ng-container>
-        </div>
-      </ng-container>
-    </ng-container>
+            <div class="emptyState compact" *ngIf="devices.length === 0">
+              <mat-icon>devices_other</mat-icon>
+              <div>
+                <div class="emptyTitle">Aucun device visible</div>
+                <div class="emptyText">La recherche actuelle ne retourne aucun résultat.</div>
+              </div>
+            </div>
+          </div>
+        </mat-card>
+      </section>
+    </div>
   </ng-container>
-
-  <ng-template #noSelected>
-    <mat-card class="cardTable">
-      <mat-card-content>
-        <div class="empty">
-          Aucun appareil sélectionné. Choisis un appareil pour afficher le dashboard.
-        </div>
-      </mat-card-content>
-    </mat-card>
-  </ng-template>
-
-  <ng-template #noTelemetry>
-    <mat-card class="cardTable">
-      <mat-card-content>
-        <div class="empty">
-          Cet appareil est bien sélectionné, mais aucune télémétrie n’est encore disponible.
-          Vérifie l’ingestion backend ou attends le prochain uplink.
-        </div>
-      </mat-card-content>
-    </mat-card>
-  </ng-template>
-
 </ng-container>
 
 <ng-template #noDevices>
-  <div class="onboardWrap">
-    <mat-card class="onboardHero">
-      <div class="heroLeft">
-        <div class="heroTitle">Aucun appareil détecté</div>
-        <div class="heroSub">
-          Pour démarrer la surveillance, ajoute ton premier device.
-          <span class="mutedInline">Ensuite le dashboard s’affichera automatiquement.</span>
-        </div>
-      </div>
-
-      <div class="heroRight">
-        <button mat-raised-button color="primary" routerLink="/devices">
-          Ouvrir Gestion des appareils
-        </button>
-      </div>
+  <div class="page">
+    <mat-card class="emptyCard">
+      <mat-icon>devices_other</mat-icon>
+      <h3>Aucun appareil enregistré</h3>
+      <p>
+        Ajoute un appareil depuis la page Devices pour activer le dashboard temps réel,
+        la carte GPS et les alertes automatiques.
+      </p>
+      <a routerLink="/devices" class="emptyLink">Ouvrir Devices →</a>
     </mat-card>
   </div>
 </ng-template>

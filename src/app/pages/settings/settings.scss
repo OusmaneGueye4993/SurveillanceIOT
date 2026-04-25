@@ -1,127 +1,369 @@
-.page {
+:host {
+  --green-1: #2f855a;
+  --green-2: #246b48;
+  --green-3: #1d5337;
+  --gold-1: #d6a74a;
+  --gold-2: #f0d38c;
+  --red-1: #c84f4f;
+  --bg-main: #f6f1e8;
+  --card: rgba(255, 255, 255, 0.78);
+  --card-strong: rgba(255, 255, 255, 0.94);
+  --text-1: #1f2937;
+  --text-2: rgba(31, 41, 55, 0.72);
+  --text-3: rgba(31, 41, 55, 0.5);
+  --border-soft: rgba(22, 28, 34, 0.06);
+  --shadow-soft: 0 16px 34px rgba(20, 24, 20, 0.08);
+  --shadow-card: 0 28px 60px rgba(20, 24, 20, 0.12);
+}
+
+.settingsPage {
   display: grid;
-  gap: 14px;
+  gap: 18px;
+  padding: 4px 0 24px;
 }
 
-.head h2 {
-  margin: 0;
-  font-weight: 950;
-  letter-spacing: -0.01em;
-}
-
-.head p {
-  margin: 6px 0 0;
-  opacity: 0.75;
-}
-
-.grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 14px;
-}
-
-@media (min-width: 1100px) {
-  .grid {
-    grid-template-columns: 1.1fr 0.9fr;
-    align-items: start;
-  }
-}
-
-.card {
-  border-radius: 18px;
-}
-
-.hint {
-  opacity: 0.75;
-  font-size: 13px;
-  margin-bottom: 10px;
-}
-
-.list {
-  display: grid;
-  gap: 10px;
-}
-
-.row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-
-  padding: 10px 12px;
-  border-radius: 14px;
-  background: rgba(0, 0, 0, 0.03);
-  border: 1px solid rgba(0, 0, 0, 0.06);
-}
-
-.left {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  min-width: 0;
-}
-
-.drag {
-  opacity: 0.75;
-  cursor: grab;
-  user-select: none;
-  font-size: 18px;
-}
-
-.meta {
-  display: grid;
-  gap: 2px;
-  min-width: 0;
-}
-
-.title {
-  font-weight: 900;
-  line-height: 1.2;
-}
-
-.sub {
-  opacity: 0.7;
-  font-size: 12px;
-  white-space: nowrap;
+.settingsHero {
+  position: relative;
   overflow: hidden;
-  text-overflow: ellipsis;
+  border-radius: 28px;
+  padding: 20px 22px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.94) 0%, rgba(250, 245, 236, 0.98) 100%);
+  border: 1px solid rgba(220, 212, 196, 0.85);
+  box-shadow: var(--shadow-card);
 }
 
-.form {
-  display: grid;
-  gap: 14px;
+.heroGlow {
+  position: absolute;
+  border-radius: 999px;
+  filter: blur(26px);
+  pointer-events: none;
 }
 
-.sectionTitle {
-  font-weight: 950;
+.heroGlowOne {
+  width: 260px;
+  height: 260px;
+  top: -100px;
+  right: -50px;
+  background: radial-gradient(circle, rgba(214, 167, 74, 0.16), transparent 70%);
+}
+
+.heroGlowTwo {
+  width: 260px;
+  height: 260px;
+  bottom: -110px;
+  left: -50px;
+  background: radial-gradient(circle, rgba(47, 133, 90, 0.15), transparent 70%);
+}
+
+.heroTop {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.heroText {
+  max-width: 760px;
+}
+
+.eyebrow {
+  font-size: 0.76rem;
+  font-weight: 900;
+  letter-spacing: 0.7px;
+  text-transform: uppercase;
+  color: rgba(47, 133, 90, 0.82);
   margin-bottom: 8px;
 }
 
-.divider {
-  height: 1px;
-  background: rgba(0, 0, 0, 0.08);
-  margin: 2px 0;
+.heroText h1 {
+  margin: 0;
+  font-size: 2rem;
+  line-height: 1.06;
+  font-weight: 900;
+  color: var(--green-2);
 }
 
-.full {
+.heroText p {
+  margin: 10px 0 0;
+  color: var(--text-2);
+  line-height: 1.55;
+  font-size: 0.98rem;
+}
+
+.heroActions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.ghostBtn,
+.saveBtn {
+  height: 48px;
+  border-radius: 16px !important;
+  font-weight: 900;
+  letter-spacing: 0.2px;
+  padding: 0 18px !important;
+}
+
+.ghostBtn {
+  background: rgba(255, 255, 255, 0.58);
+  border: 1px solid rgba(47, 133, 90, 0.16) !important;
+  color: var(--green-2) !important;
+  box-shadow: 0 8px 20px rgba(20, 24, 20, 0.04);
+}
+
+.saveBtn {
+  color: #fff !important;
+  background: linear-gradient(180deg, var(--green-1) 0%, var(--green-2) 100%) !important;
+  box-shadow: 0 16px 32px rgba(47, 133, 90, 0.22) !important;
+}
+
+.ghostBtn mat-icon,
+.saveBtn mat-icon {
+  margin-right: 8px;
+}
+
+.saveBanner {
+  position: relative;
+  z-index: 1;
+  margin-top: 16px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: 999px;
+  background: rgba(20, 108, 67, 0.1);
+  color: #146c43;
+  font-weight: 800;
+  box-shadow: var(--shadow-soft);
+}
+
+.settingsGrid {
+  display: grid;
+  gap: 18px;
+}
+
+.settingsCard {
+  border-radius: 24px !important;
+  background: var(--card);
+  backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.74);
+  box-shadow: var(--shadow-soft);
+}
+
+.sectionCard {
+  padding: 20px;
+}
+
+.cardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.cardHeaderText {
+  max-width: 760px;
+}
+
+.cardEyebrow {
+  font-size: 0.75rem;
+  font-weight: 900;
+  letter-spacing: 0.55px;
+  text-transform: uppercase;
+  color: var(--text-3);
+  margin-bottom: 5px;
+}
+
+.cardTitle {
+  font-size: 1.14rem;
+  font-weight: 900;
+  color: var(--text-1);
+}
+
+.cardSub {
+  margin-top: 5px;
+  color: var(--text-2);
+  line-height: 1.45;
+  font-size: 0.92rem;
+}
+
+.cardIcon {
+  width: 50px;
+  height: 50px;
+  border-radius: 18px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  box-shadow: var(--shadow-soft);
+}
+
+.cardIcon mat-icon {
+  width: 24px;
+  height: 24px;
+  font-size: 24px;
+}
+
+.softGreen {
+  background: rgba(47, 133, 90, 0.1);
+  color: var(--green-2);
+}
+
+.softGold {
+  background: rgba(214, 167, 74, 0.14);
+  color: #8c6508;
+}
+
+.softRed {
+  background: rgba(200, 79, 79, 0.12);
+  color: var(--red-1);
+}
+
+.toggleGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.toggleCard {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+  padding: 16px;
+  border-radius: 20px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.92) 0%, rgba(249, 245, 237, 0.96) 100%);
+  border: 1px solid var(--border-soft);
+  box-shadow: 0 10px 22px rgba(20, 24, 20, 0.04);
+  transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
+}
+
+.toggleCard:hover,
+.featureCard:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 16px 30px rgba(20, 24, 20, 0.07);
+  border-color: rgba(47, 133, 90, 0.14);
+}
+
+.toggleInfo,
+.featureText {
+  min-width: 0;
+}
+
+.toggleTitle {
+  font-size: 0.98rem;
+  font-weight: 900;
+  color: var(--text-1);
+}
+
+.toggleText {
+  margin-top: 4px;
+  font-size: 0.88rem;
+  line-height: 1.42;
+  color: var(--text-2);
+}
+
+.behaviorGrid,
+.thresholdGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.featureCard {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+  min-height: 78px;
+  padding: 16px;
+  border-radius: 20px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.92) 0%, rgba(249, 245, 237, 0.96) 100%);
+  border: 1px solid var(--border-soft);
+  box-shadow: 0 10px 22px rgba(20, 24, 20, 0.04);
+  transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
+}
+
+.fullField {
   width: 100%;
 }
 
-.fields {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 12px;
+:host ::ng-deep .mat-mdc-form-field {
+  width: 100%;
+  --mdc-outlined-text-field-container-shape: 18px;
+  --mdc-outlined-text-field-outline-color: rgba(47, 133, 90, 0.16);
+  --mdc-outlined-text-field-hover-outline-color: rgba(47, 133, 90, 0.36);
+  --mdc-outlined-text-field-focus-outline-color: rgba(47, 133, 90, 0.82);
+  --mdc-outlined-text-field-label-text-color: rgba(31, 41, 55, 0.68);
 }
 
-@media (min-width: 900px) {
-  .fields {
-    grid-template-columns: 1fr 1fr;
+:host ::ng-deep .mat-mdc-text-field-wrapper {
+  background: rgba(255, 255, 255, 0.74);
+  backdrop-filter: blur(10px);
+  box-shadow:
+    0 8px 18px rgba(31, 41, 55, 0.03),
+    0 1px 0 rgba(255, 255, 255, 0.8) inset;
+}
+
+:host ::ng-deep .mat-mdc-form-field-icon-suffix,
+:host ::ng-deep .mat-mdc-form-field-icon-prefix {
+  color: rgba(36, 107, 72, 0.82);
+}
+
+:host ::ng-deep .mat-mdc-slide-toggle {
+  --mdc-switch-selected-focus-state-layer-color: var(--green-1);
+  --mdc-switch-selected-handle-color: #ffffff;
+  --mdc-switch-selected-track-color: var(--green-1);
+  --mdc-switch-selected-hover-track-color: var(--green-2);
+  --mdc-switch-selected-pressed-track-color: var(--green-2);
+}
+
+:host ::ng-deep .mdc-switch {
+  transform: scale(0.95);
+}
+
+@media (max-width: 980px) {
+  .toggleGrid,
+  .behaviorGrid,
+  .thresholdGrid {
+    grid-template-columns: 1fr;
   }
 }
 
-.actions {
-  display: flex;
-  gap: 10px;
-  justify-content: flex-end;
-  margin-top: 6px;
+@media (max-width: 720px) {
+  .settingsHero {
+    padding: 18px;
+    border-radius: 22px;
+  }
+
+  .heroText h1 {
+    font-size: 1.55rem;
+  }
+
+  .heroActions {
+    width: 100%;
+  }
+
+  .ghostBtn,
+  .saveBtn {
+    flex: 1 1 auto;
+  }
+
+  .toggleCard,
+  .featureCard {
+    align-items: flex-start;
+  }
+
+  .sectionCard {
+    padding: 16px;
+    border-radius: 22px !important;
+  }
 }

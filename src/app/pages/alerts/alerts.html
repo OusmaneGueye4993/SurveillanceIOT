@@ -1,19 +1,34 @@
 <div class="page">
-  <div class="header">
-    <div>
-      <h2>Alertes</h2>
-      <p>Résumé lisible de l’état du système et des anomalies détectées.</p>
+  <section class="heroCard">
+    <div class="heroTop">
+      <div>
+        <div class="eyebrow">Monitoring • Anomalies • Priorités</div>
+        <h2>Centre d’alertes</h2>
+        <p>
+          Vue consolidée des anomalies du système, des seuils critiques et des
+          états à surveiller sur le device sélectionné.
+        </p>
+      </div>
+
+      <div class="actions">
+        <button mat-raised-button class="refreshBtn" (click)="refresh()">
+          <mat-icon>refresh</mat-icon>
+          <span>Rafraîchir</span>
+        </button>
+      </div>
     </div>
 
-    <div class="actions">
-      <button mat-stroked-button (click)="refresh()">
-        <mat-icon>refresh</mat-icon>
-        Rafraîchir
-      </button>
+    <div class="selectedHint" *ngIf="(selected$ | async) as selected">
+      Appareil de référence : <b>{{ selected }}</b>
     </div>
-  </div>
+  </section>
 
-  <div class="summaryGrid">
+  <section class="summaryGrid">
+    <mat-card class="summaryCard total">
+      <div class="summaryLabel">Total alertes</div>
+      <div class="summaryValue">{{ (totalCount$ | async) ?? 0 }}</div>
+    </mat-card>
+
     <mat-card class="summaryCard critical">
       <div class="summaryLabel">Critiques</div>
       <div class="summaryValue">{{ (criticalCount$ | async) ?? 0 }}</div>
@@ -28,14 +43,10 @@
       <div class="summaryLabel">Informations</div>
       <div class="summaryValue">{{ (infoCount$ | async) ?? 0 }}</div>
     </mat-card>
-  </div>
+  </section>
 
   <mat-card class="card">
     <ng-container *ngIf="(hasAnyDevice$ | async) === true; else noDevices">
-      <div class="selectedHint" *ngIf="(selected$ | async) as selected">
-        Appareil de référence : <b>{{ selected }}</b>
-      </div>
-
       <ng-container *ngIf="(alerts$ | async) as alerts">
         <div class="alertList" *ngIf="alerts.length > 0; else emptyAlerts">
           <div
@@ -81,7 +92,7 @@
         <mat-icon class="emptyIcon">devices_other</mat-icon>
         <div class="emptyTitle">Aucun appareil enregistré</div>
         <div class="emptyMsg">
-          Ajoute un appareil depuis la page Devices pour activer la surveillance et les alertes.
+          Ajoute un appareil depuis la page Devices pour activer les alertes automatiques.
         </div>
       </div>
     </ng-template>

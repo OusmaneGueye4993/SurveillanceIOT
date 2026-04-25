@@ -38,6 +38,10 @@ export class AlertsComponent {
     map((items) => items.filter((a) => a.level === 'info').length)
   );
 
+  totalCount$ = this.alerts$.pipe(
+    map((items) => items.length)
+  );
+
   refresh(): void {
     this.deviceStore.refresh();
     this.telemetryStore.refreshFleetOnce();

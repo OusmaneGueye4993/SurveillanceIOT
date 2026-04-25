@@ -1,102 +1,184 @@
-.page {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
+:host {
+  --green-1: #2f855a;
+  --green-2: #246b48;
+  --text-1: #1f2937;
+  --text-2: rgba(31, 41, 55, 0.72);
+  --text-3: rgba(31, 41, 55, 0.5);
+  --shadow-soft: 0 18px 36px rgba(20, 24, 20, 0.08);
+  --shadow-card: 0 28px 60px rgba(20, 24, 20, 0.12);
 }
 
-/* ===== Top bar ===== */
-.top {
+.page {
+  display: grid;
+  gap: 18px;
+}
+
+.heroCard {
+  border-radius: 28px;
+  padding: 24px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.92) 0%, rgba(250, 245, 236, 0.98) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  box-shadow: var(--shadow-card);
+}
+
+.heroTop {
   display: flex;
   justify-content: space-between;
-  align-items: flex-end;
-  gap: 12px;
-
-  .titleBlock {
-    min-width: 0;
-  }
-
-  h2 {
-    margin: 0;
-    font-size: 26px;
-    font-weight: 850;
-    letter-spacing: -0.02em;
-  }
-
-  .sub {
-    margin-top: 4px;
-    font-size: 13px;
-    opacity: 0.75;
-    display: flex;
-    gap: 6px;
-    align-items: center;
-
-    .sep {
-      opacity: 0.6;
-    }
-  }
-
-  .topActions {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    flex-wrap: wrap;
-    justify-content: flex-end;
-  }
-
-  .winGroup {
-    border-radius: 999px;
-    overflow: hidden;
-  }
-}
-
-/* ===== Layout ===== */
-.grid {
-  display: grid;
-  grid-template-columns: 1fr;
+  align-items: flex-start;
   gap: 14px;
+  flex-wrap: wrap;
 }
 
-@media (min-width: 1100px) {
-  .grid {
-    grid-template-columns: 1.65fr 1fr;
-    align-items: start;
-  }
+.eyebrow {
+  font-size: 0.78rem;
+  font-weight: 900;
+  letter-spacing: 0.7px;
+  text-transform: uppercase;
+  color: rgba(47, 133, 90, 0.84);
+  margin-bottom: 6px;
 }
 
-/* ===== MAP ===== */
-.mapCard {
-  border-radius: 18px;
+.titleBlock h2 {
+  margin: 0;
+  font-size: 1.9rem;
+  font-weight: 900;
+  color: var(--green-2);
+}
+
+.sub {
+  margin-top: 8px;
+  font-size: 0.95rem;
+  color: var(--text-2);
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.sep {
+  opacity: 0.5;
+}
+
+.topActions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.winGroup {
+  border-radius: 999px;
   overflow: hidden;
 }
 
-.mapWrap {
-  padding: 0 !important;
+.actionBtn {
+  height: 42px;
+  border-radius: 14px !important;
 }
 
-/* Important: le composant doit avoir une hauteur fixe */
+.summaryGrid {
+  margin-top: 16px;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(150px, 1fr));
+  gap: 12px;
+}
+
+.summaryCard {
+  padding: 16px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.74);
+  box-shadow: var(--shadow-soft);
+
+  .summaryLabel {
+    font-size: 0.82rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.35px;
+    color: var(--text-3);
+  }
+
+  .summaryValue {
+    margin-top: 8px;
+    font-size: 1.42rem;
+    font-weight: 900;
+    color: var(--text-1);
+  }
+
+  &.online {
+    background: rgba(20, 108, 67, 0.08);
+  }
+
+  &.offline {
+    background: rgba(159, 47, 47, 0.08);
+  }
+
+  &.accent {
+    background: rgba(214, 167, 74, 0.12);
+  }
+}
+
+.mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 1.45fr 0.9fr;
+  gap: 14px;
+  margin-top: 16px;
+}
+
+.mapCard,
+.sideCard {
+  border-radius: 24px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.74);
+  box-shadow: var(--shadow-soft);
+}
+
+.panelHead {
+  padding: 18px 18px 0;
+}
+
+.panelTitle {
+  font-size: 1.04rem;
+  font-weight: 900;
+  color: var(--text-1);
+}
+
+.panelSub {
+  margin-top: 4px;
+  color: var(--text-2);
+  font-size: 0.9rem;
+}
+
+.mapWrap {
+  padding: 16px 16px 0;
+}
+
 app-fleet-map.map {
   display: block;
   width: 100%;
-  height: 520px;
+  height: 560px;
+  border-radius: 20px;
+  overflow: hidden;
 }
 
-/* Si tu as un conteneur interne leaflet, cette règle aide aussi */
 :host ::ng-deep .leaflet-container {
   width: 100%;
   height: 100%;
-  border-radius: 14px;
+  border-radius: 20px;
 }
 
-/* Footer */
 .mapFooter {
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 12px;
-  padding: 10px 14px;
+  padding: 12px 16px 16px;
   font-size: 12px;
-  background: rgba(0, 0, 0, 0.03);
-  border-top: 1px solid rgba(0, 0, 0, 0.06);
 
   .legend {
     display: flex;
@@ -115,9 +197,11 @@ app-fleet-map.map {
     &.ok {
       background: #2e7d32;
     }
+
     &.off {
       background: #c62828;
     }
+
     &.last {
       background: #ff9800;
     }
@@ -131,10 +215,10 @@ app-fleet-map.map {
   }
 
   .pill {
-    padding: 4px 10px;
+    padding: 6px 10px;
     border-radius: 999px;
     background: rgba(0, 0, 0, 0.05);
-    font-weight: 700;
+    font-weight: 800;
 
     &.off {
       background: rgba(198, 40, 40, 0.12);
@@ -148,83 +232,124 @@ app-fleet-map.map {
   }
 }
 
-/* ===== LISTE ===== */
-.panel {
-  border-radius: 18px;
+.deviceList {
+  display: grid;
+  gap: 10px;
 }
 
-.equip-item {
-  border-radius: 12px;
-  margin-bottom: 8px;
-  transition: background 0.15s ease;
+.equipItem {
+  width: 100%;
+  border: 1px solid rgba(22, 28, 34, 0.06);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.72);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px;
   cursor: pointer;
+  transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
 
   &:hover {
-    background: rgba(0, 0, 0, 0.04);
+    transform: translateY(-1px);
+    box-shadow: 0 14px 28px rgba(31, 41, 55, 0.06);
   }
 
   &.selected {
-    background: rgba(33, 150, 243, 0.14);
+    background: rgba(47, 133, 90, 0.08);
+    border-color: rgba(47, 133, 90, 0.26);
+  }
+}
+
+.equipLeft {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.dot {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  flex-shrink: 0;
+
+  &.active {
+    background: #2e7d32;
   }
 
-  .dot {
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    margin-right: 10px;
+  &.inactive {
+    background: #c62828;
+  }
+}
 
-    &.active {
-      background: #2e7d32;
-    }
+.equipMain {
+  min-width: 0;
+}
 
-    &.inactive {
-      background: #c62828;
-    }
+.eui {
+  font-weight: 900;
+  color: var(--text-1);
+  word-break: break-all;
+}
+
+.meta {
+  margin-top: 4px;
+  font-size: 0.86rem;
+  color: var(--text-2);
+  line-height: 1.4;
+}
+
+.badge {
+  font-size: 0.74rem;
+  font-weight: 900;
+  padding: 7px 10px;
+  border-radius: 999px;
+  flex-shrink: 0;
+
+  &.ok {
+    background: rgba(46, 125, 50, 0.14);
+    color: #2e7d32;
   }
 
-  .main {
-    flex: 1;
-    min-width: 0;
-  }
-
-  .eui {
-    font-weight: 850;
-    font-size: 13px;
-  }
-
-  .meta {
-    font-size: 12px;
-    opacity: 0.7;
-    margin-top: 2px;
-  }
-
-  .badge {
-    font-size: 11px;
-    font-weight: 850;
-    padding: 4px 8px;
-    border-radius: 999px;
-
-    &.ok {
-      background: rgba(46, 125, 50, 0.15);
-      color: #2e7d32;
-    }
-
-    &.off {
-      background: rgba(198, 40, 40, 0.15);
-      color: #c62828;
-    }
+  &.off {
+    background: rgba(198, 40, 40, 0.14);
+    color: #c62828;
   }
 }
 
 .empty {
-  padding: 16px;
+  padding: 24px 16px;
   text-align: center;
-  opacity: 0.7;
+  color: var(--text-2);
 }
 
-/* Mobile */
-@media (max-width: 768px) {
+@media (max-width: 1100px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .heroCard {
+    padding: 18px;
+    border-radius: 22px;
+  }
+
+  .titleBlock h2 {
+    font-size: 1.55rem;
+  }
+
+  .summaryGrid {
+    grid-template-columns: 1fr;
+  }
+
   app-fleet-map.map {
     height: 420px;
+  }
+
+  .mapFooter {
+    flex-direction: column;
+    align-items: flex-start;
   }
 }

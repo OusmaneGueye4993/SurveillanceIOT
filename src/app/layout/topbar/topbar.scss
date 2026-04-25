@@ -1,9 +1,13 @@
 .topbar {
-  position: sticky;
-  top: 0;
-  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  background: #ffffff;
+  border-bottom: 1px solid rgba(20, 28, 35, 0.08);
+  position: relative;
+  z-index: 1;
 }
-
 .left {
   display: flex;
   flex-direction: column;
