@@ -43,7 +43,7 @@ type ConnStatus = 'disconnected' | 'connecting' | 'connected';
 
 type TelemetryView = {
   device_eui: string;
-  ts: number | null;
+  ts: number | null
   lat: number | null;
   lng: number | null;
   temp: number | null;
