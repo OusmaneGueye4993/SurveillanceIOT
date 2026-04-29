@@ -1,28 +1,65 @@
-.topbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 14px 18px;
-  background: #ffffff;
-  border-bottom: 1px solid rgba(20, 28, 35, 0.08);
-  position: relative;
-  z-index: 1;
+:host {
+  display: block;
+  position: sticky;
+  top: 0;
+  z-index: 200;
 }
+
+/* On écrase complètement le mat-toolbar */
+.topbar {
+  /* Important : override Angular Material */
+  background: rgba(255, 255, 255, 0.92) !important;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  color: var(--text) !important;
+
+  height: 56px !important;
+  min-height: 56px !important;
+  padding: 0 12px !important;
+
+  border-bottom: 1px solid var(--border);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+
+  display: flex !important;
+  align-items: center !important;
+}
+
 .left {
   display: flex;
-  flex-direction: column;
-  line-height: 1.1;
+  align-items: center;
+  gap: 4px;
 }
 
 .title {
-  font-weight: 700;
-}
-
-.subtitle {
-  font-size: 12px;
-  opacity: 0.85;
+  font-weight: 800;
+  font-size: 17px;
+  color: var(--text);
+  letter-spacing: -0.02em;
 }
 
 .spacer {
   flex: 1;
+}
+
+/* Bouton hamburger */
+.burger {
+  color: var(--primary) !important;
+
+  mat-icon {
+    font-size: 24px;
+    width: 24px;
+    height: 24px;
+  }
+}
+
+/* Icônes droite */
+.icon-btn {
+  color: var(--muted) !important;
+  transition: color 0.15s ease, background 0.15s ease;
+
+  &:hover {
+    color: var(--primary) !important;
+    background: rgba(31, 111, 74, 0.08) !important;
+    border-radius: 50%;
+  }
 }

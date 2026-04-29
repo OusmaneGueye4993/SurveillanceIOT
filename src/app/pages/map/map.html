@@ -1,22 +1,27 @@
-<div class="page">
-  <section class="heroCard">
-    <div class="heroTop">
-      <div class="titleBlock">
-        <div class="eyebrow">Leaflet • GPS • Temps réel</div>
-        <h2>Carte de suivi du drone</h2>
+<div class="map-page">
+  <section class="hero-card">
+    <div class="hero-top">
+      <div class="title-block">
+        <div class="eyebrow">
+          <span class="status-dot"></span>
+          Leaflet • GPS • Temps réel
+        </div>
+
+        <h2>Carte de suivi l'objet IOT</h2>
+
         <div class="sub">
           Historique de trajectoire, flotte visible et dernier point GPS.
           <span class="sep">•</span>
           API :
-          <b>{{ (status$ | async) ?? '—' }}</b>
+          <b class="api-status">{{ (status$ | async) ?? '—' }}</b>
         </div>
       </div>
 
-      <div class="topActions">
+      <div class="top-actions">
         <mat-button-toggle-group
           [value]="(windowKey$ | async) ?? '1h'"
           (change)="setWindow($event.value)"
-          class="winGroup"
+          class="win-group"
           aria-label="Fenêtre historique"
         >
           <mat-button-toggle value="15m">15 min</mat-button-toggle>
@@ -25,14 +30,14 @@
           <mat-button-toggle value="24h">24 h</mat-button-toggle>
         </mat-button-toggle-group>
 
-        <button mat-stroked-button class="actionBtn" (click)="refresh()">
+        <button mat-stroked-button class="action-btn primary-action" (click)="refresh()">
           <mat-icon>refresh</mat-icon>
           <span>Rafraîchir</span>
         </button>
 
         <button
           mat-stroked-button
-          class="actionBtn"
+          class="action-btn"
           (click)="follow = true; refresh()"
           [disabled]="!(selected$ | async)"
         >
@@ -42,14 +47,16 @@
 
         <button
           mat-stroked-button
-          class="actionBtn"
+          class="action-btn"
           (click)="clearHistory()"
-          [disabled]="history.length === 0">
+          [disabled]="history.length === 0"
+        >
           <mat-icon>layers_clear</mat-icon>
           <span>Effacer trajet</span>
         </button>
 
         <mat-slide-toggle
+          class="history-toggle"
           [checked]="showHistory"
           (change)="showHistory = $event.checked"
         >
@@ -58,42 +65,62 @@
       </div>
     </div>
 
-    <section class="summaryGrid">
-      <mat-card class="summaryCard">
-        <div class="summaryLabel">Device sélectionné</div>
-        <div class="summaryValue mono">
-          {{ (selectedDevice$ | async)?.device_eui || 'Aucun' }}
+    <section class="summary-grid">
+      <mat-card class="summary-card selected-device">
+        <div class="summary-icon">
+          <mat-icon>memory</mat-icon>
+        </div>
+        <div>
+          <div class="summary-label">Device sélectionné</div>
+          <div class="summary-value mono">
+            {{ (selectedDevice$ | async)?.name || 'Aucun' }}
+          </div>
         </div>
       </mat-card>
 
-      <mat-card class="summaryCard online">
-        <div class="summaryLabel">En ligne</div>
-        <div class="summaryValue">{{ (onlineCount$ | async) ?? 0 }}</div>
+      <mat-card class="summary-card online">
+        <div class="summary-icon">
+          <mat-icon>wifi</mat-icon>
+        </div>
+        <div>
+          <div class="summary-label">En ligne</div>
+          <div class="summary-value">{{ (onlineCount$ | async) ?? 0 }}</div>
+        </div>
       </mat-card>
 
-      <mat-card class="summaryCard offline">
-        <div class="summaryLabel">Hors ligne</div>
-        <div class="summaryValue">{{ (offlineCount$ | async) ?? 0 }}</div>
+      <mat-card class="summary-card offline">
+        <div class="summary-icon">
+          <mat-icon>wifi_off</mat-icon>
+        </div>
+        <div>
+          <div class="summary-label">Hors ligne</div>
+          <div class="summary-value">{{ (offlineCount$ | async) ?? 0 }}</div>
+        </div>
       </mat-card>
 
-      <mat-card class="summaryCard accent">
-        <div class="summaryLabel">Points historiques</div>
-        <div class="summaryValue">{{ history.length }}</div>
+      <mat-card class="summary-card history">
+        <div class="summary-icon">
+          <mat-icon>location_on</mat-icon>
+        </div>
+        <div>
+          <div class="summary-label">Points historiques</div>
+          <div class="summary-value">{{ history.length }}</div>
+        </div>
       </mat-card>
     </section>
 
-    <section class="grid">
-      <mat-card class="mapCard">
-        <div class="panelHead">
+    <section class="content-grid">
+      <mat-card class="map-card">
+        <div class="panel-head">
           <div>
-            <div class="panelTitle">Carte principale</div>
-            <div class="panelSub">
+            <div class="panel-title">Carte principale</div>
+            <div class="panel-sub">
               Visualisation du dernier point et du trajet historique
             </div>
           </div>
         </div>
 
-        <div class="mapWrap">
+        <div class="map-wrap">
           <ng-container *ngIf="(hasAnyDevice$ | async) === true; else noDevices">
             <ng-container *ngIf="(filtered$ | async) as devices">
               <ng-container *ngIf="devices.length > 0; else emptyDevices">
@@ -112,14 +139,14 @@
           </ng-container>
         </div>
 
-        <div class="mapFooter">
+        <div class="map-footer">
           <div class="legend">
-            <span><span class="lgDot ok"></span> Actif</span>
-            <span><span class="lgDot off"></span> Inactif</span>
-            <span><span class="lgDot last"></span> Dernier point</span>
+            <span><span class="lg-dot ok"></span> Actif</span>
+            <span><span class="lg-dot off"></span> Inactif</span>
+            <span><span class="lg-dot last"></span> Dernier point</span>
           </div>
 
-          <div class="histState">
+          <div class="hist-state">
             <span class="pill" *ngIf="loadingHistory">Chargement…</span>
 
             <span class="pill off" *ngIf="!loadingHistory && historyError">
@@ -160,34 +187,34 @@
         </ng-template>
       </mat-card>
 
-      <mat-card class="sideCard">
-        <div class="panelHead">
+      <mat-card class="side-card">
+        <div class="panel-head">
           <div>
-            <div class="panelTitle">Flotte visible</div>
-            <div class="panelSub">Sélection rapide et état des devices</div>
+            <div class="panel-title">Flotte visible</div>
+            <div class="panel-sub">Sélection rapide et état des devices</div>
           </div>
         </div>
 
         <mat-card-content>
           <ng-container *ngIf="(hasAnyDevice$ | async) === true; else noDeviceList">
             <ng-container *ngIf="(filtered$ | async) as devices">
-              <div class="deviceList" *ngIf="devices.length > 0; else emptyState">
+              <div class="device-list" *ngIf="devices.length > 0; else emptyState">
                 <ng-container *ngIf="(selected$ | async) as selected; else noSelection">
                   <button
                     type="button"
-                    class="equipItem"
+                    class="equip-item"
                     *ngFor="let d of devices"
                     (click)="onSelect(d.device_eui)"
                     [class.selected]="d.device_eui === selected"
                   >
-                    <div class="equipLeft">
+                    <div class="equip-left">
                       <span
                         class="dot"
                         [class.active]="d.active"
                         [class.inactive]="!d.active"
                       ></span>
 
-                      <div class="equipMain">
+                      <div class="equip-main">
                         <div class="eui">{{ d.device_eui }}</div>
                         <div class="meta">
                           Bat: <b>{{ d.battery ?? '—' }}</b>% • RSSI:

@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { Router } from '@angular/router';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatButtonModule } from '@angular/material/button';
@@ -14,6 +14,9 @@ import { AuthService } from '../../core/auth/auth.service';
   styleUrl: './topbar.scss',
 })
 export class TopbarComponent {
+  @Input() showMenuBtn = false;
+  @Output() menuToggle = new EventEmitter<void>();
+
   constructor(
     public auth: AuthService,
     private router: Router

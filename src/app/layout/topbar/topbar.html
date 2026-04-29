@@ -1,18 +1,22 @@
-<mat-toolbar class="topbar" color="primary">
+<mat-toolbar class="topbar">
   <div class="left">
+    @if (showMenuBtn) {
+      <button class="burger" mat-icon-button aria-label="Ouvrir le menu" (click)="menuToggle.emit()">
+        <mat-icon>menu</mat-icon>
+      </button>
+    }
     <span class="title">MauriOT</span>
   </div>
 
   <span class="spacer"></span>
 
-  <button mat-icon-button aria-label="Notifications">
+  <button mat-icon-button aria-label="Notifications" class="icon-btn">
     <mat-icon>notifications</mat-icon>
   </button>
-  <button mat-icon-button aria-label="Profil">
+  <button mat-icon-button aria-label="Profil" class="icon-btn">
     <mat-icon>account_circle</mat-icon>
   </button>
-
-  <button mat-icon-button aria-label="Déconnexion" (click)="logout()">
+  <button mat-icon-button aria-label="Déconnexion" class="icon-btn" (click)="logout()">
     <mat-icon>logout</mat-icon>
   </button>
 </mat-toolbar>
